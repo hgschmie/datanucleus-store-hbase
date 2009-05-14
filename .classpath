@@ -4,9 +4,5 @@
 	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry excluding="src/" including="META-INF/*|plugin.xml" kind="src" path=""/>
-	<classpathentry kind="lib" path="C:/cygwin/home/Erik/hbase-0.19.1/hbase-0.19.1.jar"/>
-	<classpathentry kind="lib" path="C:/cygwin/home/Erik/hbase-0.19.1/lib/hadoop-0.19.1-core.jar"/>
-	<classpathentry kind="lib" path="C:/cygwin/home/Erik/hbase-0.19.1/lib/commons-logging-1.0.4.jar"/>
-	<classpathentry kind="lib" path="C:/cygwin/home/Erik/hbase-0.19.1/lib/commons-logging-api-1.0.4.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
