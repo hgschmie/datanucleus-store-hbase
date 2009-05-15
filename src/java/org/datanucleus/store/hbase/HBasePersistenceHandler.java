@@ -212,7 +212,11 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
             hTable = new HTableDescriptor(tableName);
             hBaseAdmin.createTable(hTable);
         }
-        
+
+        if (isNew)
+        {
+            // TODO Do something or ditch this variable
+        }
         HColumnDescriptor hColumn;
         hColumn = hTable.getFamily(HBaseUtils.getTableName(acmd).getBytes());
         if( hColumn==null)
