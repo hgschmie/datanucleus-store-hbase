@@ -8,4 +8,6 @@ Bundle-Vendor: DataNucleus
 Require-Bundle: org.datanucleus;bundle-version="1.1.3"
 Import-Package: org.apache.hadoop.hbase,
  org.apache.hadoop.hbase.client,
- org.apache.hadoop.hbase.io
+ org.apache.hadoop.hbase.io,
+ javax.transaction;resolution:=optional,
+ javax.transaction.xa;resolution:=optional
