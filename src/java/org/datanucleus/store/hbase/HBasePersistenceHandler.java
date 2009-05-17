@@ -201,22 +201,16 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
         HBaseAdmin hBaseAdmin = new HBaseAdmin(config);
         HTableDescriptor hTable;
         String tableName = HBaseUtils.getTableName(acmd);
-        boolean isNew = false;
         try
         {
             hTable = hBaseAdmin.getTableDescriptor(tableName);
         }
         catch(TableNotFoundException ex)
         {
-            isNew = true;
             hTable = new HTableDescriptor(tableName);
             hBaseAdmin.createTable(hTable);
         }
 
-        if (isNew)
-        {
-            // TODO Do something or ditch this variable
-        }
         HColumnDescriptor hColumn;
         hColumn = hTable.getFamily(HBaseUtils.getTableName(acmd).getBytes());
         if( hColumn==null)
