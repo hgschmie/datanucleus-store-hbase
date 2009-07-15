@@ -28,13 +28,13 @@ import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.FetchPlan;
-import org.datanucleus.ManagedConnection;
 import org.datanucleus.ObjectManager;
 import org.datanucleus.StateManager;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.store.FieldValues;
+import org.datanucleus.store.connection.ManagedConnection;
 
 public class HBaseUtils
 {

@@ -17,19 +17,18 @@ Contributors :
 ***********************************************************************/
 package org.datanucleus.store.hbase;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import javax.transaction.xa.XAResource;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.datanucleus.ConnectionFactory;
-import org.datanucleus.ManagedConnection;
-import org.datanucleus.ManagedConnectionResourceListener;
 import org.datanucleus.OMFContext;
 import org.datanucleus.ObjectManager;
+import org.datanucleus.store.connection.AbstractManagedConnection;
+import org.datanucleus.store.connection.ConnectionFactory;
+import org.datanucleus.store.connection.ManagedConnection;
+import org.datanucleus.store.connection.ManagedConnectionResourceListener;
 
 /**
  * Implementation of a ConnectionFactory for HBase.
@@ -62,7 +61,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory
         {
             addedOptions.putAll(options);
         }
-        return omfContext.getConnectionManager().allocateConnection(this, om, addedOptions);
+        return omfContext.getStoreManager().getConnectionManager().allocateConnection(this, om, addedOptions);
     }
 
     /**
@@ -73,24 +72,16 @@ public class ConnectionFactoryImpl implements ConnectionFactory
      */
     public ManagedConnection createManagedConnection(ObjectManager om, Map transactionOptions)
     {
-        return new ManagedConnectionImpl(om.getOMFContext(), transactionOptions);
+        return new ManagedConnectionImpl();
     }
 
     /**
-     * Implementation of a ManagedConnection for LDAP.
+     * Implementation of a ManagedConnection.
      */
-    public static class ManagedConnectionImpl implements ManagedConnection
+    public static class ManagedConnectionImpl extends AbstractManagedConnection
     {
-        OMFContext omf;
-        Map options;
-        Object conn;
-        boolean locked = false;
-        List listeners = new ArrayList();
-
-        public ManagedConnectionImpl(OMFContext omf, Map options)
+        public ManagedConnectionImpl()
         {
-            this.omf = omf;
-            this.options = options;
         }
 
         public void close()
@@ -117,14 +108,6 @@ public class ConnectionFactoryImpl implements ConnectionFactory
             }
         }
 
-        public void flush()
-        {
-            for (int i=0; i<listeners.size(); i++)
-            {
-                ((ManagedConnectionResourceListener)listeners.get(i)).managedConnectionFlushed();
-            }
-        }
-
         public Object getConnection()
         {
             if (conn == null)
@@ -138,35 +121,10 @@ public class ConnectionFactoryImpl implements ConnectionFactory
         {
             return null;
         }
-        
-        public boolean isLocked()
-        {
-            return locked;
-        }
-
-        public void lock()
-        {
-            locked = true;
-        }
-
-        public void unlock()
-        {
-            locked = false;
-        }
 
         public void release()
         {
             //ignore
-        }
-
-        public void addListener(ManagedConnectionResourceListener listener)
-        {
-            listeners.add(listener);
-        }
-
-        public void removeListener(ManagedConnectionResourceListener listener)
-        {
-            listeners.remove(listener);
         }
 
         public void setManagedResource()
