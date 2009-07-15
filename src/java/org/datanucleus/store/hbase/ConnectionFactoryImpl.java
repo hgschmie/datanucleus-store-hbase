@@ -17,7 +17,6 @@ Contributors :
 ***********************************************************************/
 package org.datanucleus.store.hbase;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import javax.transaction.xa.XAResource;
@@ -25,19 +24,16 @@ import javax.transaction.xa.XAResource;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.datanucleus.OMFContext;
 import org.datanucleus.ObjectManager;
+import org.datanucleus.store.connection.AbstractConnectionFactory;
 import org.datanucleus.store.connection.AbstractManagedConnection;
-import org.datanucleus.store.connection.ConnectionFactory;
 import org.datanucleus.store.connection.ManagedConnection;
 import org.datanucleus.store.connection.ManagedConnectionResourceListener;
 
 /**
  * Implementation of a ConnectionFactory for HBase.
  */
-public class ConnectionFactoryImpl implements ConnectionFactory
+public class ConnectionFactoryImpl extends AbstractConnectionFactory
 {
-    /** The underlying ObjectManagerFactory context. */
-    OMFContext omfContext;
-
     /**
      * Constructor.
      * @param omfContext The OMF context
@@ -45,23 +41,7 @@ public class ConnectionFactoryImpl implements ConnectionFactory
      */
     public ConnectionFactoryImpl(OMFContext omfContext, String resourceType)
     {
-        this.omfContext = omfContext;
-    }
-
-    /**
-     * Method to get a managed connection enlisting it in the transaction.
-     * @param om ObjectManager (or null)
-     * @param options Any options for when creating the connection
-     * @return The connection
-     */
-    public ManagedConnection getConnection(ObjectManager om, Map options)
-    {
-        Map addedOptions = new HashMap();
-        if (options != null)
-        {
-            addedOptions.putAll(options);
-        }
-        return omfContext.getStoreManager().getConnectionManager().allocateConnection(this, om, addedOptions);
+        super(omfContext, resourceType);
     }
 
     /**
