@@ -18,19 +18,14 @@ Contributors :
 package org.datanucleus.store.hbase;
 
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.OMFContext;
 import org.datanucleus.ObjectManager;
-import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.store.AbstractStoreManager;
-import org.datanucleus.store.DefaultCandidateExtent;
-import org.datanucleus.store.Extent;
 import org.datanucleus.store.NucleusConnection;
-import org.datanucleus.store.exceptions.NoExtentException;
 
 public class HBaseStoreManager extends AbstractStoreManager
 {
@@ -48,34 +43,6 @@ public class HBaseStoreManager extends AbstractStoreManager
 
         logConfiguration();
     }
-
-    /**
-     * Get the date/time of the datastore.
-     * @return Date/time of the datastore
-     */
-    public Date getDatastoreDate()
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
-     * Accessor for an Extent for a class.
-     * @param om The Object Manager
-     * @param c The class requiring the Extent
-     * @param subclasses Whether to include subclasses of 'c'
-     * @return The Extent.
-     */
-    public Extent getExtent(final ObjectManager om, final Class c, final boolean subclasses)
-    {
-        AbstractClassMetaData cmd = getMetaDataManager().getMetaDataForClass(c, om.getClassLoaderResolver());
-        if (!cmd.isRequiresExtent())
-        {
-            throw new NoExtentException(c.getName());
-        }
-
-        return new DefaultCandidateExtent(om, c, subclasses, cmd);
-    }
-
 
     public NucleusConnection getNucleusConnection(ObjectManager om)
     {
