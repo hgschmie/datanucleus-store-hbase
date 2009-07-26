@@ -68,8 +68,8 @@ public class HBaseUtils
      * @param ignoreCache Whether to ignore the cache
      * @return List of objects of the candidate type (or subclass)
      */
-    public static List getObjectsOfCandidateType(ObjectManager om, ManagedConnection mconn, Class candidateClass,
-            boolean subclasses, boolean ignoreCache)
+    public static List getObjectsOfCandidateType(final ObjectManager om, ManagedConnection mconn,
+            Class candidateClass, boolean subclasses, boolean ignoreCache)
     {
         List results = new ArrayList();
         HBaseConfiguration config = (HBaseConfiguration)mconn.getConnection();
@@ -95,7 +95,7 @@ public class HBaseUtils
                     public void fetchFields(StateManager sm)
                     {
                         sm.replaceFields(acmd.getPKMemberPositions(), new HBaseFetchFieldManager(sm, result));
-                        sm.replaceFields(acmd.getBasicMemberPositions(clr), new HBaseFetchFieldManager(sm, result));
+                        sm.replaceFields(acmd.getBasicMemberPositions(clr, om.getMetaDataManager()), new HBaseFetchFieldManager(sm, result));
                     }
 
                     public void fetchNonLoadedFields(StateManager sm)
