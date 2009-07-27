@@ -24,11 +24,14 @@ import java.util.Set;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.OMFContext;
 import org.datanucleus.ObjectManager;
+import org.datanucleus.metadata.MetaDataListener;
 import org.datanucleus.store.AbstractStoreManager;
 import org.datanucleus.store.NucleusConnection;
 
 public class HBaseStoreManager extends AbstractStoreManager
 {
+    MetaDataListener metadataListener;
+
     /**
      * Constructor.
      * @param clr ClassLoader resolver
@@ -38,10 +41,23 @@ public class HBaseStoreManager extends AbstractStoreManager
     {
         super("hbase", clr, omfContext);
 
+        // Handler for metadata
+        metadataListener = new HBaseMetaDataListener();
+        omfContext.getMetaDataManager().registerListener(metadataListener);
+
         // Handler for persistence process
         persistenceHandler = new HBasePersistenceHandler(this);
 
         logConfiguration();
+    }
+
+    /**
+     * Release of resources
+     */
+    public void close()
+    {
+        omfContext.getMetaDataManager().deregisterListener(metadataListener);
+        super.close();
     }
 
     public NucleusConnection getNucleusConnection(ObjectManager om)
