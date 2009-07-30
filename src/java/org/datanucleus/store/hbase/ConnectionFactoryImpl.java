@@ -101,15 +101,5 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
         {
             return null;
         }
-
-        public void release()
-        {
-            //ignore
-        }
-
-        public void setManagedResource()
-        {
-            //ignore
-        }
     }
 }
