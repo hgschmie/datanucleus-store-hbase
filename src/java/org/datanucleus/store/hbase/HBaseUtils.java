@@ -33,6 +33,7 @@ import org.datanucleus.StateManager;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
+import org.datanucleus.metadata.ColumnMetaData;
 import org.datanucleus.store.FieldValues;
 import org.datanucleus.store.connection.ManagedConnection;
 
@@ -40,19 +41,27 @@ public class HBaseUtils
 {
     public static String getTableName(AbstractClassMetaData acmd)
     {
-        if(acmd.getTable()!=null)
+        if (acmd.getTable() != null)
         {
             return acmd.getTable();
         }
         return acmd.getName();
     }
-    
+
     public static String getColumnName(AbstractClassMetaData acmd, int fieldNumber)
     {
         AbstractMemberMetaData ammd = acmd.getMetaDataForManagedMemberAtPosition(fieldNumber);
-        String columnName = ammd.getColumn();
-        if (columnName==null)
+        String columnName = null;
+
+        // Try the first column if specified
+        ColumnMetaData[] colmds = ammd.getColumnMetaData();
+        if (colmds != null && colmds.length > 0)
         {
+            columnName = colmds[0].getName();
+        }
+        if (columnName == null)
+        {
+            // Fallback to the field/property name
             columnName = ammd.getName();
         }
         return HBaseUtils.getTableName(acmd)+":" + columnName;
