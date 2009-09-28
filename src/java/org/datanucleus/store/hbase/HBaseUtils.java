@@ -80,6 +80,7 @@ public class HBaseUtils
     public static List getObjectsOfCandidateType(final ObjectManager om, ManagedConnection mconn,
             Class candidateClass, boolean subclasses, boolean ignoreCache)
     {
+        // TODO This ignores subclasses! Make use of it
         List results = new ArrayList();
         HBaseConfiguration config = (HBaseConfiguration)mconn.getConnection();
         try
