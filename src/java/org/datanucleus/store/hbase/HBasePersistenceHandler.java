@@ -25,10 +25,12 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.datanucleus.ObjectManager;
 import org.datanucleus.StateManager;
 import org.datanucleus.exceptions.NucleusDataStoreException;
@@ -94,8 +96,8 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
             AbstractClassMetaData acmd = sm.getClassMetaData();
             createSchema(config, acmd);
             HTable table = new HTable(config, HBaseUtils.getTableName(acmd));
-            RowResult result = getRowResult(sm,table);
-            if(result==null)
+            Result result = getResult(sm,table);
+            if(result.getRow()==null)
             {
                 throw new NucleusObjectNotFoundException();
             }
@@ -144,10 +146,12 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
             AbstractClassMetaData acmd = sm.getClassMetaData();
             createSchema(config, acmd);
             HTable table = new HTable(config, HBaseUtils.getTableName(acmd));
-            BatchUpdate batch = newBatchUpdate(sm);
-            HBaseInsertFieldManager fm = new HBaseInsertFieldManager(sm, batch);
+            Put put = newPut(sm);
+            Delete delete = newDelete(sm);
+            HBaseInsertFieldManager fm = new HBaseInsertFieldManager(sm, put, delete);
             sm.provideFields(acmd.getAllMemberPositions(), fm);
-            table.commit(batch);
+            table.put(put);
+            table.delete(delete);
             table.close();
         }
         catch (IOException e)
@@ -160,25 +164,38 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
         }
     }
 
-    private BatchUpdate newBatchUpdate(StateManager sm) throws IOException
+    private Put newPut(StateManager sm) throws IOException
     {
         Object pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream(bos);
         oos.writeObject(pkValue);
-        BatchUpdate batch = new BatchUpdate(bos.toByteArray());
+        Put batch = new Put(bos.toByteArray());
+        oos.close();
+        bos.close();
+        return batch;
+    }
+
+    private Delete newDelete(StateManager sm) throws IOException
+    {
+        Object pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(bos);
+        oos.writeObject(pkValue);
+        Delete batch = new Delete(bos.toByteArray());
         oos.close();
         bos.close();
         return batch;
     }
     
-    private RowResult getRowResult(StateManager sm, HTable table) throws IOException
+    private Result getResult(StateManager sm, HTable table) throws IOException
     {
         Object pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream(bos);
         oos.writeObject(pkValue);
-        RowResult result = table.getRow(bos.toByteArray());
+        Get get = new Get(bos.toByteArray());
+        Result result = table.get(get);
         oos.close();
         bos.close();
         return result;
@@ -203,7 +220,7 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
         String tableName = HBaseUtils.getTableName(acmd);
         try
         {
-            hTable = hBaseAdmin.getTableDescriptor(tableName);
+            hTable = hBaseAdmin.getTableDescriptor(tableName.getBytes());
         }
         catch(TableNotFoundException ex)
         {
@@ -240,10 +257,12 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
             AbstractClassMetaData acmd = sm.getClassMetaData();
             createSchema(config, acmd);
             HTable table = new HTable(config, HBaseUtils.getTableName(acmd));
-            BatchUpdate batch = newBatchUpdate(sm);
-            HBaseInsertFieldManager fm = new HBaseInsertFieldManager(sm, batch);
+            Put put = newPut(sm);
+            Delete delete = newDelete(sm);
+            HBaseInsertFieldManager fm = new HBaseInsertFieldManager(sm, put, delete);
             sm.provideFields(fieldNumbers, fm);
-            table.commit(batch);
+            table.put(put);
+            table.delete(delete);
             table.close();
         }
         catch (IOException e)

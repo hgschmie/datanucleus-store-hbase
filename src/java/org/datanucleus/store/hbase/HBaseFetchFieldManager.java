@@ -21,17 +21,17 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 
-import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.client.Result;
 import org.datanucleus.StateManager;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.store.fieldmanager.AbstractFieldManager;
 
 public class HBaseFetchFieldManager extends AbstractFieldManager
 {
-    RowResult result;
+    Result result;
     StateManager sm;
 
-    public HBaseFetchFieldManager(StateManager sm, RowResult result)
+    public HBaseFetchFieldManager(StateManager sm, Result result)
     {
         this.sm = sm;
         this.result = result;
@@ -39,11 +39,12 @@ public class HBaseFetchFieldManager extends AbstractFieldManager
 
     public boolean fetchBooleanField(int fieldNumber)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
         boolean value;
         try
         {
-            byte[] bytes = result.get(columnName).getValue();
+            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
             ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
             ObjectInputStream ois = new ObjectInputStream(bis);
             value = ois.readBoolean();
@@ -59,11 +60,12 @@ public class HBaseFetchFieldManager extends AbstractFieldManager
     
     public byte fetchByteField(int fieldNumber)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
         byte value;
         try
         {
-            byte[] bytes = result.get(columnName).getValue();
+            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
             ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
             ObjectInputStream ois = new ObjectInputStream(bis);
             value = ois.readByte();
@@ -79,11 +81,12 @@ public class HBaseFetchFieldManager extends AbstractFieldManager
     
     public char fetchCharField(int fieldNumber)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
         char value;
         try
         {
-            byte[] bytes = result.get(columnName).getValue();
+            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
             ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
             ObjectInputStream ois = new ObjectInputStream(bis);
             value = ois.readChar();
@@ -99,11 +102,12 @@ public class HBaseFetchFieldManager extends AbstractFieldManager
     
     public double fetchDoubleField(int fieldNumber)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
         double value;
         try
         {
-            byte[] bytes = result.get(columnName).getValue();
+            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
             ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
             ObjectInputStream ois = new ObjectInputStream(bis);
             value = ois.readDouble();
@@ -119,11 +123,12 @@ public class HBaseFetchFieldManager extends AbstractFieldManager
     
     public float fetchFloatField(int fieldNumber)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
         float value;
         try
         {
-            byte[] bytes = result.get(columnName).getValue();
+            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
             ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
             ObjectInputStream ois = new ObjectInputStream(bis);
             value = ois.readFloat();
@@ -139,11 +144,12 @@ public class HBaseFetchFieldManager extends AbstractFieldManager
     
     public int fetchIntField(int fieldNumber)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
         int value;
         try
         {
-            byte[] bytes = result.get(columnName).getValue();
+            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
             ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
             ObjectInputStream ois = new ObjectInputStream(bis);
             value = ois.readInt();
@@ -159,11 +165,12 @@ public class HBaseFetchFieldManager extends AbstractFieldManager
     
     public long fetchLongField(int fieldNumber)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
         long value;
         try
         {
-            byte[] bytes = result.get(columnName).getValue();
+            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
             ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
             ObjectInputStream ois = new ObjectInputStream(bis);
             value = ois.readLong();
@@ -179,13 +186,14 @@ public class HBaseFetchFieldManager extends AbstractFieldManager
     
     public Object fetchObjectField(int fieldNumber)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
         Object value;
         try
         {
             try
             {
-                byte[] bytes = result.get(columnName).getValue();
+                byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
                 ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
                 ObjectInputStream ois = new ObjectInputStream(bis);
                 value = ois.readObject();
@@ -210,11 +218,12 @@ public class HBaseFetchFieldManager extends AbstractFieldManager
     
     public short fetchShortField(int fieldNumber)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
         short value;
         try
         {
-            byte[] bytes = result.get(columnName).getValue();
+            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
             ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
             ObjectInputStream ois = new ObjectInputStream(bis);
             value = ois.readShort();
@@ -230,13 +239,14 @@ public class HBaseFetchFieldManager extends AbstractFieldManager
     
     public String fetchStringField(int fieldNumber)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
         String value;
         try
         {
             try
             {
-                byte[] bytes = result.get(columnName).getValue();
+                byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
                 ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
                 ObjectInputStream ois = new ObjectInputStream(bis);
                 value = (String) ois.readObject();

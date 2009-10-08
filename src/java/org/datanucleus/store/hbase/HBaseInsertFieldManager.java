@@ -21,24 +21,28 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 
-import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Put;
 import org.datanucleus.StateManager;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.store.fieldmanager.AbstractFieldManager;
 
 public class HBaseInsertFieldManager extends AbstractFieldManager
 {
-    BatchUpdate batch;
+    Put put;
+    Delete delete;
     StateManager sm;
 
-    public HBaseInsertFieldManager(StateManager sm, BatchUpdate batch)
+    public HBaseInsertFieldManager(StateManager sm, Put put, Delete delete)
     {
         this.sm = sm;
-        this.batch = batch;
+        this.put = put;
+        this.delete = delete;
     }
     
     public void storeBooleanField(int fieldNumber, boolean value)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
 
         try
@@ -47,7 +51,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
             ObjectOutputStream oos = new ObjectOutputStream(bos);
             oos.writeBoolean(value);
             oos.flush();
-            batch.put(columnName, bos.toByteArray());
+            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
             oos.close();
             bos.close();
         }
@@ -59,12 +63,14 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
     
     public void storeByteField(int fieldNumber, byte value)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
-        batch.put(columnName, new byte[]{value});
+        put.add(familyName.getBytes(), columnName.getBytes(), new byte[]{value});
     }
 
     public void storeCharField(int fieldNumber, char value)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
         try
         {
@@ -72,7 +78,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
             ObjectOutputStream oos = new ObjectOutputStream(bos);
             oos.writeChar(value);
             oos.flush();
-            batch.put(columnName, bos.toByteArray());
+            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
             oos.close();
             bos.close();
         }
@@ -84,6 +90,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
     
     public void storeDoubleField(int fieldNumber, double value)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
         try
         {
@@ -91,7 +98,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
             ObjectOutputStream oos = new ObjectOutputStream(bos);
             oos.writeDouble(value);
             oos.flush();
-            batch.put(columnName, bos.toByteArray());
+            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
             oos.close();
             bos.close();
         }
@@ -103,6 +110,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
     
     public void storeFloatField(int fieldNumber, float value)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
         try
         {
@@ -110,7 +118,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
             ObjectOutputStream oos = new ObjectOutputStream(bos);
             oos.writeFloat(value);
             oos.flush();
-            batch.put(columnName, bos.toByteArray());
+            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
             oos.close();
             bos.close();
         }
@@ -122,6 +130,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
     
     public void storeIntField(int fieldNumber, int value)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
         try
         {
@@ -129,7 +138,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
             ObjectOutputStream oos = new ObjectOutputStream(bos);
             oos.writeInt(value);
             oos.flush();
-            batch.put(columnName, bos.toByteArray());
+            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
             oos.close();
             bos.close();
         }
@@ -141,6 +150,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
     
     public void storeLongField(int fieldNumber, long value)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
         try
         {
@@ -148,7 +158,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
             ObjectOutputStream oos = new ObjectOutputStream(bos);
             oos.writeLong(value);
             oos.flush();
-            batch.put(columnName, bos.toByteArray());
+            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
             oos.close();
             bos.close();
         }
@@ -160,10 +170,11 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
     
     public void storeObjectField(int fieldNumber, Object value)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
         if(value==null)
         {
-            batch.delete(columnName);
+            delete.deleteColumn(familyName.getBytes(), columnName.getBytes());
         }
         else
         {
@@ -172,7 +183,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
                 ByteArrayOutputStream bos = new ByteArrayOutputStream();
                 ObjectOutputStream oos = new ObjectOutputStream(bos);
                 oos.writeObject(value);
-                batch.put(columnName, bos.toByteArray());
+                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
                 oos.close();
                 bos.close();
             }
@@ -185,6 +196,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
     
     public void storeShortField(int fieldNumber, short value)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
         try
         {
@@ -192,7 +204,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
             ObjectOutputStream oos = new ObjectOutputStream(bos);
             oos.writeShort(value);
             oos.flush();
-            batch.put(columnName, bos.toByteArray());
+            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
             oos.close();
             bos.close();
         }
@@ -204,10 +216,11 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
     
     public void storeStringField(int fieldNumber, String value)
     {
+        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
         String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
         if(value==null)
         {
-            batch.delete(columnName);
+            delete.deleteColumn(familyName.getBytes(), columnName.getBytes());
         }
         else
         {
@@ -216,7 +229,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
                 ByteArrayOutputStream bos = new ByteArrayOutputStream();
                 ObjectOutputStream oos = new ObjectOutputStream(bos);
                 oos.writeObject(value);
-                batch.put(columnName, bos.toByteArray());
+                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
                 oos.close();
                 bos.close();
             }

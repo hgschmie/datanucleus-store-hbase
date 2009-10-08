@@ -23,9 +23,14 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Scanner;
-import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.FetchPlan;
 import org.datanucleus.ObjectManager;
@@ -50,6 +55,16 @@ public class HBaseUtils
 
     public static String getColumnName(AbstractClassMetaData acmd, int fieldNumber)
     {
+        return getFamilyName(acmd,fieldNumber)+":" + getQualifierName(acmd,fieldNumber);
+    }
+
+    public static String getFamilyName(AbstractClassMetaData acmd, int fieldNumber)
+    {
+        return HBaseUtils.getTableName(acmd);
+    }
+
+    public static String getQualifierName(AbstractClassMetaData acmd, int fieldNumber)
+    {
         AbstractMemberMetaData ammd = acmd.getMetaDataForManagedMemberAtPosition(fieldNumber);
         String columnName = null;
 
@@ -64,9 +79,8 @@ public class HBaseUtils
             // Fallback to the field/property name
             columnName = ammd.getName();
         }
-        return HBaseUtils.getTableName(acmd)+":" + columnName;
-    }
-    
+        return columnName;
+    }    
     /**
      * Convenience method to get all objects of the candidate type (and optional subclasses) from the 
      * specified XML connection.
@@ -87,18 +101,22 @@ public class HBaseUtils
         {
             final ClassLoaderResolver clr = om.getClassLoaderResolver();
             final AbstractClassMetaData acmd = om.getMetaDataManager().getMetaDataForClass(candidateClass,clr);
+            createSchema(config, acmd);
+
             HTable table = new HTable(config,HBaseUtils.getTableName(acmd));
 
-            byte[][] columnNames = new byte[acmd.getMemberCount()][];
+            Scan scan = new Scan();
             for(int i=0; i<acmd.getMemberCount(); i++)
             {
-                columnNames[i] = HBaseUtils.getColumnName(acmd, acmd.getManagedMembers()[i].getAbsoluteFieldNumber()).getBytes();
+                byte[] familyNames = HBaseUtils.getFamilyName(acmd, acmd.getManagedMembers()[i].getAbsoluteFieldNumber()).getBytes();
+                byte[] columnNames = HBaseUtils.getColumnName(acmd, acmd.getManagedMembers()[i].getAbsoluteFieldNumber()).getBytes();
+                scan.addColumn(familyNames,columnNames);
             }
-            Scanner scanner = table.getScanner(columnNames);
-            Iterator<RowResult> it = scanner.iterator();
+            ResultScanner scanner = table.getScanner(scan);
+            Iterator<Result> it = scanner.iterator();
             while(it.hasNext())
             {
-                final RowResult result = it.next();
+                final Result result = it.next();
                 results.add(om.findObjectUsingAID(clr.classForName(acmd.getFullClassName()), new FieldValues()
                 {
                     // StateManager calls the fetchFields method
@@ -120,8 +138,6 @@ public class HBaseUtils
                 }, ignoreCache, true));
 
             }
-                // we want to get back only "myColumnFamily:columnQualifier1" when we iterate
-                table.getScanner(new String[]{"myColumnFamily:columnQualifier1"});
         }
         catch (IOException e)
         {
@@ -129,4 +145,31 @@ public class HBaseUtils
         }
         return results;
     }
+    
+    public static void createSchema(HBaseConfiguration config, AbstractClassMetaData acmd) throws IOException
+    {
+        HBaseAdmin hBaseAdmin = new HBaseAdmin(config);
+        HTableDescriptor hTable;
+        String tableName = HBaseUtils.getTableName(acmd);
+        try
+        {
+            hTable = hBaseAdmin.getTableDescriptor(tableName.getBytes());
+        }
+        catch(TableNotFoundException ex)
+        {
+            hTable = new HTableDescriptor(tableName);
+            hBaseAdmin.createTable(hTable);
+        }
+
+        HColumnDescriptor hColumn;
+        hColumn = hTable.getFamily(HBaseUtils.getTableName(acmd).getBytes());
+        if( hColumn==null)
+        {
+            hColumn = new HColumnDescriptor(HBaseUtils.getTableName(acmd)+":");
+            hTable.addFamily(hColumn);
+            hBaseAdmin.disableTable(hTable.getName());
+            hBaseAdmin.modifyTable(hTable.getName(), hTable);
+            hBaseAdmin.enableTable(hTable.getName());
+        }
+    }    
 }

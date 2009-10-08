@@ -31,7 +31,7 @@ public class HBaseMetaDataListener implements MetaDataListener
 {
     /** Localiser for messages. */
     protected static final Localiser LOCALISER = Localiser.getInstance(
-        "org.datanucleus.store.xml.Localisation", HBaseStoreManager.class.getClassLoader());
+        "org.datanucleus.store.hbase.Localisation", HBaseStoreManager.class.getClassLoader());
 
     /* (non-Javadoc)
      * @see org.datanucleus.metadata.MetaDataListener#loaded(org.datanucleus.metadata.AbstractClassMetaData)
@@ -41,7 +41,7 @@ public class HBaseMetaDataListener implements MetaDataListener
         if (cmd.getIdentityType() == IdentityType.DATASTORE && !cmd.isEmbeddedOnly())
         {
             // Datastore id not supported
-            throw new InvalidMetaDataException(LOCALISER, "HBase.DatastoreID");
+            throw new InvalidMetaDataException(LOCALISER, "HBase.DatastoreID", cmd.getFullClassName());
         }
     }
 }
