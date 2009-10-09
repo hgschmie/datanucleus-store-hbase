@@ -53,9 +53,9 @@ public class HBaseUtils
         return acmd.getName();
     }
 
-    public static String getFamilyName(AbstractClassMetaData acmd, int fieldNumber)
+    public static String getFamilyName(AbstractClassMetaData acmd, int absoluteFieldNumber)
     {
-        AbstractMemberMetaData ammd = acmd.getMetaDataForManagedMemberAtPosition(fieldNumber);
+        AbstractMemberMetaData ammd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(absoluteFieldNumber);
         String columnName = null;
 
         // Try the first column if specified
@@ -76,9 +76,9 @@ public class HBaseUtils
         return columnName;
     }
 
-    public static String getQualifierName(AbstractClassMetaData acmd, int fieldNumber)
+    public static String getQualifierName(AbstractClassMetaData acmd, int absoluteFieldNumber)
     {
-        AbstractMemberMetaData ammd = acmd.getMetaDataForManagedMemberAtPosition(fieldNumber);
+        AbstractMemberMetaData ammd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(absoluteFieldNumber);
         String columnName = null;
 
         // Try the first column if specified
@@ -111,22 +111,21 @@ public class HBaseUtils
     public static List getObjectsOfCandidateType(final ObjectManager om, ManagedConnection mconn,
             Class candidateClass, boolean subclasses, boolean ignoreCache)
     {
-        // TODO This ignores subclasses! Make use of it
         List results = new ArrayList();
         HBaseConfiguration config = (HBaseConfiguration)mconn.getConnection();
         try
         {
             final ClassLoaderResolver clr = om.getClassLoaderResolver();
             final AbstractClassMetaData acmd = om.getMetaDataManager().getMetaDataForClass(candidateClass,clr);
-            createSchema(config, acmd);
 
             HTable table = new HTable(config,HBaseUtils.getTableName(acmd));
 
             Scan scan = new Scan();
-            for(int i=0; i<acmd.getMemberCount(); i++)
+            int[] fieldNumbers =  acmd.getAllMemberPositions();
+            for(int i=0; i<fieldNumbers.length; i++)
             {
-                byte[] familyNames = HBaseUtils.getFamilyName(acmd, acmd.getManagedMembers()[i].getAbsoluteFieldNumber()).getBytes();
-                byte[] columnNames = HBaseUtils.getQualifierName(acmd, acmd.getManagedMembers()[i].getAbsoluteFieldNumber()).getBytes();
+                byte[] familyNames = HBaseUtils.getFamilyName(acmd,fieldNumbers[i]).getBytes();
+                byte[] columnNames = HBaseUtils.getQualifierName(acmd, fieldNumbers[i]).getBytes();
                 scan.addColumn(familyNames,columnNames);
             }
             ResultScanner scanner = table.getScanner(scan);
@@ -163,7 +162,7 @@ public class HBaseUtils
         return results;
     }
     
-    public static void createSchema(HBaseConfiguration config, AbstractClassMetaData acmd) throws IOException
+    public static void createSchema(HBaseConfiguration config, AbstractClassMetaData acmd, boolean autoCreateColumns) throws IOException
     {
         HBaseAdmin hBaseAdmin = new HBaseAdmin(config);
         HTableDescriptor hTable;
@@ -178,28 +177,32 @@ public class HBaseUtils
             hBaseAdmin.createTable(hTable);
         }
 
-        boolean modified = false;
-        if (!hTable.hasFamily(HBaseUtils.getTableName(acmd).getBytes()))
+        if (autoCreateColumns)
         {
-            HColumnDescriptor hColumn = new HColumnDescriptor(HBaseUtils.getTableName(acmd));
-            hTable.addFamily(hColumn);
-            modified = true;
-        }
-        for (int i=0; i<acmd.getNoOfManagedMembers(); i++)
-        {            
-            String familyName = getFamilyName(acmd, acmd.getManagedMembers()[i].getAbsoluteFieldNumber());
-            if (!hTable.hasFamily(familyName.getBytes()))
+            boolean modified = false;
+            if (!hTable.hasFamily(HBaseUtils.getTableName(acmd).getBytes()))
             {
-                HColumnDescriptor hColumn = new HColumnDescriptor(familyName);
+                HColumnDescriptor hColumn = new HColumnDescriptor(HBaseUtils.getTableName(acmd));
                 hTable.addFamily(hColumn);
                 modified = true;
             }
-        }
-        if (modified)
-        {
-            hBaseAdmin.disableTable(hTable.getName());
-            hBaseAdmin.modifyTable(hTable.getName(), hTable);
-            hBaseAdmin.enableTable(hTable.getName());
+            int[] fieldNumbers =  acmd.getAllMemberPositions();
+            for(int i=0; i<fieldNumbers.length; i++)
+            {            
+                String familyName = getFamilyName(acmd, fieldNumbers[i]);
+                if (!hTable.hasFamily(familyName.getBytes()))
+                {
+                    HColumnDescriptor hColumn = new HColumnDescriptor(familyName);
+                    hTable.addFamily(hColumn);
+                    modified = true;
+                }
+            }
+            if (modified)
+            {
+                hBaseAdmin.disableTable(hTable.getName());
+                hBaseAdmin.modifyTable(hTable.getName(), hTable);
+                hBaseAdmin.enableTable(hTable.getName());
+            }
         }
     }    
 }

@@ -68,7 +68,6 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
         {
             HBaseConfiguration config = (HBaseConfiguration)mconn.getConnection();
             AbstractClassMetaData acmd = sm.getClassMetaData();
-            HBaseUtils.createSchema(config, acmd);
             HTable table = new HTable(config, HBaseUtils.getTableName(acmd));
             
             table.delete(newDelete(sm));
@@ -91,7 +90,6 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
         {
             HBaseConfiguration config = (HBaseConfiguration)mconn.getConnection();
             AbstractClassMetaData acmd = sm.getClassMetaData();
-            HBaseUtils.createSchema(config, acmd);
             HTable table = new HTable(config, HBaseUtils.getTableName(acmd));
             Result result = getResult(sm,table);
             if(result.getRow()==null)
@@ -135,13 +133,15 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
             // Do nothing since object with this id doesn't exist
         }
         
-        storeMgr.addClass(sm.getClassMetaData().getFullClassName(),sm.getObjectManager().getClassLoaderResolver());
+        if (!storeMgr.managesClass(sm.getClassMetaData().getFullClassName()))
+        {
+            storeMgr.addClass(sm.getClassMetaData().getFullClassName(),sm.getObjectManager().getClassLoaderResolver());
+        }
         ManagedConnection mconn = storeMgr.getConnection(sm.getObjectManager());
         try
         {
             HBaseConfiguration config = (HBaseConfiguration)mconn.getConnection();
             AbstractClassMetaData acmd = sm.getClassMetaData();
-            HBaseUtils.createSchema(config, acmd);
             HTable table = new HTable(config, HBaseUtils.getTableName(acmd));
             Put put = newPut(sm);
             Delete delete = newDelete(sm);
@@ -218,7 +218,6 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
         {
             HBaseConfiguration config = (HBaseConfiguration)mconn.getConnection();
             AbstractClassMetaData acmd = sm.getClassMetaData();
-            HBaseUtils.createSchema(config, acmd);
             HTable table = new HTable(config, HBaseUtils.getTableName(acmd));
             if(!exists(sm,table))
             {
@@ -246,7 +245,6 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
         {
             HBaseConfiguration config = (HBaseConfiguration)mconn.getConnection();
             AbstractClassMetaData acmd = sm.getClassMetaData();
-            HBaseUtils.createSchema(config, acmd);
             HTable table = new HTable(config, HBaseUtils.getTableName(acmd));
             Put put = newPut(sm);
             Delete delete = newDelete(sm);

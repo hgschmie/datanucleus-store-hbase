@@ -21,9 +21,11 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.OMFContext;
 import org.datanucleus.ObjectManager;
+import org.datanucleus.PersistenceConfiguration;
 import org.datanucleus.metadata.MetaDataListener;
 import org.datanucleus.store.AbstractStoreManager;
 import org.datanucleus.store.NucleusConnection;
@@ -32,6 +34,11 @@ public class HBaseStoreManager extends AbstractStoreManager
 {
     MetaDataListener metadataListener;
 
+    private HBaseConfiguration hbaseConfig; 
+    
+    private boolean autoCreateTables = false;
+    private boolean autoCreateColumns = false;
+    
     /**
      * Constructor.
      * @param clr ClassLoader resolver
@@ -42,12 +49,26 @@ public class HBaseStoreManager extends AbstractStoreManager
         super("hbase", clr, omfContext);
 
         // Handler for metadata
-        metadataListener = new HBaseMetaDataListener();
+        metadataListener = new HBaseMetaDataListener(this);
         omfContext.getMetaDataManager().registerListener(metadataListener);
 
         // Handler for persistence process
         persistenceHandler = new HBasePersistenceHandler(this);
 
+        hbaseConfig = new HBaseConfiguration();
+
+        PersistenceConfiguration conf = omfContext.getPersistenceConfiguration();
+        boolean autoCreateSchema = conf.getBooleanProperty("datanucleus.autoCreateSchema");
+        if (autoCreateSchema)
+        {
+            autoCreateTables = true;
+            autoCreateColumns = true;
+        }
+        else
+        {
+            autoCreateTables = conf.getBooleanProperty("datanucleus.autoCreateTables");
+            autoCreateColumns = conf.getBooleanProperty("datanucleus.autoCreateColumns");
+        }        
         logConfiguration();
     }
 
@@ -74,5 +95,20 @@ public class HBaseStoreManager extends AbstractStoreManager
         set.add("ApplicationIdentity");
         set.add("TransactionIsolationLevel.read-committed");
         return set;
-    }    
+    }
+    
+    public HBaseConfiguration getHbaseConfig()
+    {
+        return hbaseConfig;
+    }
+    
+    public boolean isAutoCreateColumns()
+    {
+        return autoCreateColumns;
+    }
+    
+    public boolean isAutoCreateTables()
+    {
+        return autoCreateTables;
+    }
 }
