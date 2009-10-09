@@ -19,21 +19,18 @@ package org.datanucleus.store.hbase;
 
 import java.util.Map;
 
-import javax.transaction.xa.XAResource;
-
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.datanucleus.OMFContext;
 import org.datanucleus.ObjectManager;
 import org.datanucleus.store.connection.AbstractConnectionFactory;
-import org.datanucleus.store.connection.AbstractManagedConnection;
 import org.datanucleus.store.connection.ManagedConnection;
-import org.datanucleus.store.connection.ManagedConnectionResourceListener;
 
 /**
  * Implementation of a ConnectionFactory for HBase.
  */
 public class ConnectionFactoryImpl extends AbstractConnectionFactory
 {
+    private HBaseConnectionPool connectionPool;
+
     /**
      * Constructor.
      * @param omfContext The OMF context
@@ -42,6 +39,9 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
     public ConnectionFactoryImpl(OMFContext omfContext, String resourceType)
     {
         super(omfContext, resourceType);
+        HBaseStoreManager storeManager = (HBaseStoreManager) omfContext.getStoreManager();
+        connectionPool = new HBaseConnectionPool();
+        connectionPool.setTimeBetweenEvictionRunsMillis(storeManager.getPoolTimeBetweenEvictionRunsMillis());
     }
 
     /**
@@ -52,54 +52,16 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
      */
     public ManagedConnection createManagedConnection(ObjectManager om, Map transactionOptions)
     {
-        return new ManagedConnectionImpl();
-    }
-
-    /**
-     * Implementation of a ManagedConnection.
-     */
-    public static class ManagedConnectionImpl extends AbstractManagedConnection
-    {
-        public ManagedConnectionImpl()
+        HBaseStoreManager storeManager = (HBaseStoreManager) om.getStoreManager();
+               
+        HBaseManagedConnection managedConnection = connectionPool.getPooledConnection();
+        if (managedConnection == null) 
         {
+            managedConnection = new HBaseManagedConnection(storeManager.getHbaseConfig());
+            managedConnection.setIdleTimeoutMills(storeManager.getPoolMinEvictableIdleTimeMillis());
+            connectionPool.registerConnection(managedConnection);
         }
-
-        public void close()
-        {
-            if (conn == null)
-            {
-                return;
-            }
-            for (int i=0; i<listeners.size(); i++)
-            {
-                ((ManagedConnectionResourceListener)listeners.get(i)).managedConnectionPreClose();
-            }
-            try
-            {
-                //close something?
-            }
-            finally
-            {
-                conn = null;
-                for (int i=0; i<listeners.size(); i++)
-                {
-                    ((ManagedConnectionResourceListener)listeners.get(i)).managedConnectionPostClose();
-                }
-            }
-        }
-
-        public Object getConnection()
-        {
-            if (conn == null)
-            {
-                conn = new HBaseConfiguration();
-            }
-            return conn;
-        }
-
-        public XAResource getXAResource()
-        {
-            return null;
-        }
+        managedConnection.incrementReferenceCount();
+        return managedConnection;
     }
 }

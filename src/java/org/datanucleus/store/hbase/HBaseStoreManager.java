@@ -29,6 +29,8 @@ import org.datanucleus.PersistenceConfiguration;
 import org.datanucleus.metadata.MetaDataListener;
 import org.datanucleus.store.AbstractStoreManager;
 import org.datanucleus.store.NucleusConnection;
+import org.datanucleus.store.connection.ConnectionFactory;
+import org.datanucleus.store.connection.ConnectionManagerImpl;
 
 public class HBaseStoreManager extends AbstractStoreManager
 {
@@ -38,6 +40,9 @@ public class HBaseStoreManager extends AbstractStoreManager
     
     private boolean autoCreateTables = false;
     private boolean autoCreateColumns = false;
+
+    private int poolTimeBetweenEvictionRunsMillis; 
+    private int poolMinEvictableIdleTimeMillis;
     
     /**
      * Constructor.
@@ -47,7 +52,7 @@ public class HBaseStoreManager extends AbstractStoreManager
     public HBaseStoreManager(ClassLoaderResolver clr, OMFContext omfContext)
     {
         super("hbase", clr, omfContext);
-
+                
         // Handler for metadata
         metadataListener = new HBaseMetaDataListener(this);
         omfContext.getMetaDataManager().registerListener(metadataListener);
@@ -69,8 +74,29 @@ public class HBaseStoreManager extends AbstractStoreManager
             autoCreateTables = conf.getBooleanProperty("datanucleus.autoCreateTables");
             autoCreateColumns = conf.getBooleanProperty("datanucleus.autoCreateColumns");
         }        
+        // how often should the evictor run
+        poolTimeBetweenEvictionRunsMillis = conf.getIntProperty("datanucleus.connectionPool.timeBetweenEvictionRunsMillis");
+        if (poolTimeBetweenEvictionRunsMillis == 0)
+        {
+            poolTimeBetweenEvictionRunsMillis = 15 * 1000; // default, 15 secs
+        }
+         
+        // how long may a connection sit idle in the pool before it may be evicted
+        poolMinEvictableIdleTimeMillis = conf.getIntProperty("datanucleus.connectionPool.minEvictableIdleTimeMillis");
+        if (poolMinEvictableIdleTimeMillis == 0)
+        {
+            poolMinEvictableIdleTimeMillis = 30 * 1000; // default, 30 secs
+        }
+                
         logConfiguration();
     }
+
+    protected void registerConnectionMgr()
+    {
+        super.registerConnectionMgr();
+        this.connectionMgr.disableConnectionPool();
+    }
+
 
     /**
      * Release of resources
@@ -110,5 +136,15 @@ public class HBaseStoreManager extends AbstractStoreManager
     public boolean isAutoCreateTables()
     {
         return autoCreateTables;
+    }
+    
+    public int getPoolMinEvictableIdleTimeMillis()
+    {
+        return poolMinEvictableIdleTimeMillis;
+    }
+    
+    public int getPoolTimeBetweenEvictionRunsMillis()
+    {
+        return poolTimeBetweenEvictionRunsMillis;
     }
 }

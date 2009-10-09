@@ -27,6 +27,7 @@ import org.datanucleus.ObjectManager;
 import org.datanucleus.query.evaluator.JDOQLEvaluator;
 import org.datanucleus.query.evaluator.JavaQueryEvaluator;
 import org.datanucleus.store.connection.ManagedConnection;
+import org.datanucleus.store.hbase.HBaseManagedConnection;
 import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.query.AbstractJDOQLQuery;
 import org.datanucleus.util.NucleusLogger;
@@ -67,7 +68,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
 
     protected Object performExecute(Map parameters)
     {
-        ManagedConnection mconn = om.getStoreManager().getConnection(om);
+        HBaseManagedConnection mconn = (HBaseManagedConnection) om.getStoreManager().getConnection(om);
         try
         {
             long startTime = System.currentTimeMillis();

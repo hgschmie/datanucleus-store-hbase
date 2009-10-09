@@ -21,7 +21,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -35,7 +34,6 @@ import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.StorePersistenceHandler;
-import org.datanucleus.store.connection.ManagedConnection;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.StringUtils;
 
@@ -63,15 +61,13 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
         // Check if read-only so update not permitted
         storeMgr.assertReadOnlyForUpdateOfObject(sm);
         
-        ManagedConnection mconn = storeMgr.getConnection(sm.getObjectManager());
+        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(sm.getObjectManager());
         try
         {
-            HBaseConfiguration config = (HBaseConfiguration)mconn.getConnection();
             AbstractClassMetaData acmd = sm.getClassMetaData();
-            HTable table = new HTable(config, HBaseUtils.getTableName(acmd));
+            HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
             
             table.delete(newDelete(sm));
-            table.close();
         }
         catch (IOException e)
         {
@@ -85,12 +81,11 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
 
     public void fetchObject(StateManager sm, int[] fieldNumbers)
     {
-        ManagedConnection mconn = storeMgr.getConnection(sm.getObjectManager());
+        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(sm.getObjectManager());
         try
         {
-            HBaseConfiguration config = (HBaseConfiguration)mconn.getConnection();
             AbstractClassMetaData acmd = sm.getClassMetaData();
-            HTable table = new HTable(config, HBaseUtils.getTableName(acmd));
+            HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
             Result result = getResult(sm,table);
             if(result.getRow()==null)
             {
@@ -121,6 +116,10 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
         // Check if read-only so update not permitted
         storeMgr.assertReadOnlyForUpdateOfObject(sm);
 
+        if (!storeMgr.managesClass(sm.getClassMetaData().getFullClassName()))
+        {
+            storeMgr.addClass(sm.getClassMetaData().getFullClassName(),sm.getObjectManager().getClassLoaderResolver());
+        }
         // Check existence of the object since HBase doesn't enforce application identity
         try
         {
@@ -133,16 +132,11 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
             // Do nothing since object with this id doesn't exist
         }
         
-        if (!storeMgr.managesClass(sm.getClassMetaData().getFullClassName()))
-        {
-            storeMgr.addClass(sm.getClassMetaData().getFullClassName(),sm.getObjectManager().getClassLoaderResolver());
-        }
-        ManagedConnection mconn = storeMgr.getConnection(sm.getObjectManager());
+        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(sm.getObjectManager());
         try
         {
-            HBaseConfiguration config = (HBaseConfiguration)mconn.getConnection();
             AbstractClassMetaData acmd = sm.getClassMetaData();
-            HTable table = new HTable(config, HBaseUtils.getTableName(acmd));
+            HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
             Put put = newPut(sm);
             Delete delete = newDelete(sm);
             HBaseInsertFieldManager fm = new HBaseInsertFieldManager(sm, put, delete);
@@ -213,12 +207,11 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
             
     public void locateObject(StateManager sm)
     {
-        ManagedConnection mconn = storeMgr.getConnection(sm.getObjectManager());
+        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(sm.getObjectManager());
         try
         {
-            HBaseConfiguration config = (HBaseConfiguration)mconn.getConnection();
             AbstractClassMetaData acmd = sm.getClassMetaData();
-            HTable table = new HTable(config, HBaseUtils.getTableName(acmd));
+            HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
             if(!exists(sm,table))
             {
                 throw new NucleusObjectNotFoundException();
@@ -240,12 +233,11 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
         // Check if read-only so update not permitted
         storeMgr.assertReadOnlyForUpdateOfObject(sm);
         
-        ManagedConnection mconn = storeMgr.getConnection(sm.getObjectManager());
+        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(sm.getObjectManager());
         try
         {
-            HBaseConfiguration config = (HBaseConfiguration)mconn.getConnection();
             AbstractClassMetaData acmd = sm.getClassMetaData();
-            HTable table = new HTable(config, HBaseUtils.getTableName(acmd));
+            HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
             Put put = newPut(sm);
             Delete delete = newDelete(sm);
             HBaseInsertFieldManager fm = new HBaseInsertFieldManager(sm, put, delete);
@@ -263,5 +255,4 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
             mconn.release();
         }
     }
-
 }

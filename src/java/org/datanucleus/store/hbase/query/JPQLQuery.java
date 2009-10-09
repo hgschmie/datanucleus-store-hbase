@@ -28,6 +28,7 @@ import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.query.evaluator.JPQLEvaluator;
 import org.datanucleus.query.evaluator.JavaQueryEvaluator;
 import org.datanucleus.store.connection.ManagedConnection;
+import org.datanucleus.store.hbase.HBaseManagedConnection;
 import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.query.AbstractJPQLQuery;
 import org.datanucleus.util.NucleusLogger;
@@ -68,7 +69,7 @@ public class JPQLQuery extends AbstractJPQLQuery
 
     protected Object performExecute(Map parameters)
     {
-        ManagedConnection mconn = om.getStoreManager().getConnection(om);
+        HBaseManagedConnection mconn = (HBaseManagedConnection) om.getStoreManager().getConnection(om);
         try
         {
             long startTime = System.currentTimeMillis();

@@ -108,17 +108,16 @@ public class HBaseUtils
      * @param ignoreCache Whether to ignore the cache
      * @return List of objects of the candidate type (or subclass)
      */
-    public static List getObjectsOfCandidateType(final ObjectManager om, ManagedConnection mconn,
+    public static List getObjectsOfCandidateType(final ObjectManager om, HBaseManagedConnection mconn,
             Class candidateClass, boolean subclasses, boolean ignoreCache)
     {
         List results = new ArrayList();
-        HBaseConfiguration config = (HBaseConfiguration)mconn.getConnection();
         try
         {
             final ClassLoaderResolver clr = om.getClassLoaderResolver();
             final AbstractClassMetaData acmd = om.getMetaDataManager().getMetaDataForClass(candidateClass,clr);
 
-            HTable table = new HTable(config,HBaseUtils.getTableName(acmd));
+            HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
 
             Scan scan = new Scan();
             int[] fieldNumbers =  acmd.getAllMemberPositions();
