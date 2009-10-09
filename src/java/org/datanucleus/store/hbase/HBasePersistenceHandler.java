@@ -22,12 +22,8 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -72,9 +68,10 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
         {
             HBaseConfiguration config = (HBaseConfiguration)mconn.getConnection();
             AbstractClassMetaData acmd = sm.getClassMetaData();
-            createSchema(config, acmd);
+            HBaseUtils.createSchema(config, acmd);
             HTable table = new HTable(config, HBaseUtils.getTableName(acmd));
-            table.deleteAll(getRowBytes(sm));
+            
+            table.delete(newDelete(sm));
             table.close();
         }
         catch (IOException e)
@@ -94,7 +91,7 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
         {
             HBaseConfiguration config = (HBaseConfiguration)mconn.getConnection();
             AbstractClassMetaData acmd = sm.getClassMetaData();
-            createSchema(config, acmd);
+            HBaseUtils.createSchema(config, acmd);
             HTable table = new HTable(config, HBaseUtils.getTableName(acmd));
             Result result = getResult(sm,table);
             if(result.getRow()==null)
@@ -144,7 +141,7 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
         {
             HBaseConfiguration config = (HBaseConfiguration)mconn.getConnection();
             AbstractClassMetaData acmd = sm.getClassMetaData();
-            createSchema(config, acmd);
+            HBaseUtils.createSchema(config, acmd);
             HTable table = new HTable(config, HBaseUtils.getTableName(acmd));
             Put put = newPut(sm);
             Delete delete = newDelete(sm);
@@ -200,49 +197,43 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
         bos.close();
         return result;
     }  
-    
-    private byte[] getRowBytes(StateManager sm) throws IOException
+            
+    private boolean exists(StateManager sm, HTable table) throws IOException
     {
         Object pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream(bos);
         oos.writeObject(pkValue);
-        byte[] bytes = bos.toByteArray();
+        Get get = new Get(bos.toByteArray());
+        boolean result = table.exists(get);
         oos.close();
         bos.close();
-        return bytes;
-    }     
-    
-    private void createSchema(HBaseConfiguration config, AbstractClassMetaData acmd) throws IOException
-    {
-        HBaseAdmin hBaseAdmin = new HBaseAdmin(config);
-        HTableDescriptor hTable;
-        String tableName = HBaseUtils.getTableName(acmd);
-        try
-        {
-            hTable = hBaseAdmin.getTableDescriptor(tableName.getBytes());
-        }
-        catch(TableNotFoundException ex)
-        {
-            hTable = new HTableDescriptor(tableName);
-            hBaseAdmin.createTable(hTable);
-        }
-
-        HColumnDescriptor hColumn;
-        hColumn = hTable.getFamily(HBaseUtils.getTableName(acmd).getBytes());
-        if( hColumn==null)
-        {
-            hColumn = new HColumnDescriptor(HBaseUtils.getTableName(acmd)+":");
-            hTable.addFamily(hColumn);
-            hBaseAdmin.disableTable(hTable.getName());
-            hBaseAdmin.modifyTable(hTable.getName(), hTable);
-            hBaseAdmin.enableTable(hTable.getName());
-        }
-    }
-    
+        return result;
+    }  
+            
     public void locateObject(StateManager sm)
     {
-        fetchObject(sm, sm.getClassMetaData().getAllMemberPositions());
+        ManagedConnection mconn = storeMgr.getConnection(sm.getObjectManager());
+        try
+        {
+            HBaseConfiguration config = (HBaseConfiguration)mconn.getConnection();
+            AbstractClassMetaData acmd = sm.getClassMetaData();
+            HBaseUtils.createSchema(config, acmd);
+            HTable table = new HTable(config, HBaseUtils.getTableName(acmd));
+            if(!exists(sm,table))
+            {
+                throw new NucleusObjectNotFoundException();
+            }
+            table.close();
+        }
+        catch (IOException e)
+        {
+            throw new NucleusDataStoreException(e.getMessage(),e);
+        }
+        finally
+        {
+            mconn.release();
+        }    
     }
 
     public void updateObject(StateManager sm, int[] fieldNumbers)
@@ -255,7 +246,7 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
         {
             HBaseConfiguration config = (HBaseConfiguration)mconn.getConnection();
             AbstractClassMetaData acmd = sm.getClassMetaData();
-            createSchema(config, acmd);
+            HBaseUtils.createSchema(config, acmd);
             HTable table = new HTable(config, HBaseUtils.getTableName(acmd));
             Put put = newPut(sm);
             Delete delete = newDelete(sm);

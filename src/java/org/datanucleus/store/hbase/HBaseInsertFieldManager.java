@@ -43,7 +43,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
     public void storeBooleanField(int fieldNumber, boolean value)
     {
         String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
 
         try
         {
@@ -64,14 +64,14 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
     public void storeByteField(int fieldNumber, byte value)
     {
         String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
         put.add(familyName.getBytes(), columnName.getBytes(), new byte[]{value});
     }
 
     public void storeCharField(int fieldNumber, char value)
     {
         String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
         try
         {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -91,7 +91,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
     public void storeDoubleField(int fieldNumber, double value)
     {
         String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
         try
         {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -111,7 +111,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
     public void storeFloatField(int fieldNumber, float value)
     {
         String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
         try
         {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -131,7 +131,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
     public void storeIntField(int fieldNumber, int value)
     {
         String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
         try
         {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -151,7 +151,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
     public void storeLongField(int fieldNumber, long value)
     {
         String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
         try
         {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -171,7 +171,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
     public void storeObjectField(int fieldNumber, Object value)
     {
         String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
         if(value==null)
         {
             delete.deleteColumn(familyName.getBytes(), columnName.getBytes());
@@ -197,7 +197,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
     public void storeShortField(int fieldNumber, short value)
     {
         String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
         try
         {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -217,7 +217,7 @@ public class HBaseInsertFieldManager extends AbstractFieldManager
     public void storeStringField(int fieldNumber, String value)
     {
         String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getColumnName(sm.getClassMetaData(),fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
         if(value==null)
         {
             delete.deleteColumn(familyName.getBytes(), columnName.getBytes());

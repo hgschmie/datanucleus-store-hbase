@@ -53,14 +53,27 @@ public class HBaseUtils
         return acmd.getName();
     }
 
-    public static String getColumnName(AbstractClassMetaData acmd, int fieldNumber)
-    {
-        return getFamilyName(acmd,fieldNumber)+":" + getQualifierName(acmd,fieldNumber);
-    }
-
     public static String getFamilyName(AbstractClassMetaData acmd, int fieldNumber)
     {
-        return HBaseUtils.getTableName(acmd);
+        AbstractMemberMetaData ammd = acmd.getMetaDataForManagedMemberAtPosition(fieldNumber);
+        String columnName = null;
+
+        // Try the first column if specified
+        ColumnMetaData[] colmds = ammd.getColumnMetaData();
+        if (colmds != null && colmds.length > 0)
+        {
+            columnName = colmds[0].getName();
+        }
+        if (columnName == null)
+        {
+            // Fallback to the field/property name
+            columnName = HBaseUtils.getTableName(acmd);
+        }
+        else if (columnName.indexOf(":")>-1)
+        {
+            columnName = columnName.substring(0,columnName.indexOf(":"));
+        }
+        return columnName;
     }
 
     public static String getQualifierName(AbstractClassMetaData acmd, int fieldNumber)
@@ -78,6 +91,10 @@ public class HBaseUtils
         {
             // Fallback to the field/property name
             columnName = ammd.getName();
+        }
+        if (columnName.indexOf(":")>-1)
+        {
+            columnName = columnName.substring(columnName.indexOf(":")+1);
         }
         return columnName;
     }    
@@ -109,7 +126,7 @@ public class HBaseUtils
             for(int i=0; i<acmd.getMemberCount(); i++)
             {
                 byte[] familyNames = HBaseUtils.getFamilyName(acmd, acmd.getManagedMembers()[i].getAbsoluteFieldNumber()).getBytes();
-                byte[] columnNames = HBaseUtils.getColumnName(acmd, acmd.getManagedMembers()[i].getAbsoluteFieldNumber()).getBytes();
+                byte[] columnNames = HBaseUtils.getQualifierName(acmd, acmd.getManagedMembers()[i].getAbsoluteFieldNumber()).getBytes();
                 scan.addColumn(familyNames,columnNames);
             }
             ResultScanner scanner = table.getScanner(scan);
@@ -161,12 +178,25 @@ public class HBaseUtils
             hBaseAdmin.createTable(hTable);
         }
 
-        HColumnDescriptor hColumn;
-        hColumn = hTable.getFamily(HBaseUtils.getTableName(acmd).getBytes());
-        if( hColumn==null)
+        boolean modified = false;
+        if (!hTable.hasFamily(HBaseUtils.getTableName(acmd).getBytes()))
         {
-            hColumn = new HColumnDescriptor(HBaseUtils.getTableName(acmd)+":");
+            HColumnDescriptor hColumn = new HColumnDescriptor(HBaseUtils.getTableName(acmd));
             hTable.addFamily(hColumn);
+            modified = true;
+        }
+        for (int i=0; i<acmd.getNoOfManagedMembers(); i++)
+        {            
+            String familyName = getFamilyName(acmd, acmd.getManagedMembers()[i].getAbsoluteFieldNumber());
+            if (!hTable.hasFamily(familyName.getBytes()))
+            {
+                HColumnDescriptor hColumn = new HColumnDescriptor(familyName);
+                hTable.addFamily(hColumn);
+                modified = true;
+            }
+        }
+        if (modified)
+        {
             hBaseAdmin.disableTable(hTable.getName());
             hBaseAdmin.modifyTable(hTable.getName(), hTable);
             hBaseAdmin.enableTable(hTable.getName());
