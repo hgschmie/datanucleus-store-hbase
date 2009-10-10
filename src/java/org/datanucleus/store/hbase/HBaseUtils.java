@@ -40,7 +40,6 @@ import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
 import org.datanucleus.store.FieldValues;
-import org.datanucleus.store.connection.ManagedConnection;
 
 public class HBaseUtils
 {

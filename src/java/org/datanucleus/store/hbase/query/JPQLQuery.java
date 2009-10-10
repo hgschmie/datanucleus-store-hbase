@@ -27,7 +27,6 @@ import org.datanucleus.ObjectManager;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.query.evaluator.JPQLEvaluator;
 import org.datanucleus.query.evaluator.JavaQueryEvaluator;
-import org.datanucleus.store.connection.ManagedConnection;
 import org.datanucleus.store.hbase.HBaseManagedConnection;
 import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.query.AbstractJPQLQuery;

@@ -29,8 +29,6 @@ import org.datanucleus.PersistenceConfiguration;
 import org.datanucleus.metadata.MetaDataListener;
 import org.datanucleus.store.AbstractStoreManager;
 import org.datanucleus.store.NucleusConnection;
-import org.datanucleus.store.connection.ConnectionFactory;
-import org.datanucleus.store.connection.ConnectionManagerImpl;
 
 public class HBaseStoreManager extends AbstractStoreManager
 {
