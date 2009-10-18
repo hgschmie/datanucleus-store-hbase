@@ -239,11 +239,10 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
             AbstractClassMetaData acmd = sm.getClassMetaData();
             HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
             Put put = newPut(sm);
-            Delete delete = newDelete(sm);
+            Delete delete = newDelete(sm); // we will ignore the delete object
             HBaseInsertFieldManager fm = new HBaseInsertFieldManager(sm, put, delete);
             sm.provideFields(fieldNumbers, fm);
             table.put(put);
-            table.delete(delete);
             table.close();
         }
         catch (IOException e)
