@@ -142,7 +142,6 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
             HBaseInsertFieldManager fm = new HBaseInsertFieldManager(sm, put, delete);
             sm.provideFields(acmd.getAllMemberPositions(), fm);
             table.put(put);
-            table.delete(delete);
             table.close();
         }
         catch (IOException e)
@@ -242,7 +241,14 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
             Delete delete = newDelete(sm); // we will ignore the delete object
             HBaseInsertFieldManager fm = new HBaseInsertFieldManager(sm, put, delete);
             sm.provideFields(fieldNumbers, fm);
-            table.put(put);
+            if( !put.isEmpty() )
+            {
+                table.put(put);
+            }
+            if( !put.isEmpty() )
+            {
+                table.delete(delete);            
+            }
             table.close();
         }
         catch (IOException e)
