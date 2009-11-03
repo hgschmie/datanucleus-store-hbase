@@ -2,9 +2,9 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Hbase Plug-in
 Bundle-SymbolicName: org.datanucleus.store.hbase;singleton:=true
-Bundle-Version: 1.0.3
+Bundle-Version: 1.0.4
 Bundle-Vendor: DataNucleus
-Require-Bundle: org.datanucleus;bundle-version="2.0.0.m3"
+Require-Bundle: org.datanucleus;bundle-version="2.0.0.m4"
 Import-Package: org.apache.hadoop.hbase,
  org.apache.hadoop.hbase.client,
  org.apache.hadoop.hbase.io,

@@ -18,6 +18,7 @@ Contributors :
 package org.datanucleus.store.hbase;
 
 import java.io.ByteArrayOutputStream;
+
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 
@@ -32,12 +33,12 @@ import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusObjectNotFoundException;
 import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
+import org.datanucleus.store.AbstractPersistenceHandler;
 import org.datanucleus.store.StoreManager;
-import org.datanucleus.store.StorePersistenceHandler;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.StringUtils;
 
-public class HBasePersistenceHandler implements StorePersistenceHandler
+public class HBasePersistenceHandler extends AbstractPersistenceHandler
 {
     /** Localiser for messages. */
     protected static final Localiser LOCALISER = Localiser.getInstance(
@@ -190,7 +191,7 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
         bos.close();
         return result;
     }  
-            
+
     private boolean exists(StateManager sm, HTable table) throws IOException
     {
         Object pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
@@ -202,8 +203,8 @@ public class HBasePersistenceHandler implements StorePersistenceHandler
         oos.close();
         bos.close();
         return result;
-    }  
-            
+    }
+
     public void locateObject(StateManager sm)
     {
         HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(sm.getObjectManager());
