@@ -17,29 +17,19 @@ Contributors :
 ***********************************************************************/
 package org.datanucleus.store.hbase;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.datanucleus.ClassLoaderResolver;
-import org.datanucleus.FetchPlan;
-import org.datanucleus.ObjectManager;
-import org.datanucleus.StateManager;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
-import org.datanucleus.store.FieldValues;
 
 public class HBaseUtils
 {
@@ -96,111 +86,85 @@ public class HBaseUtils
             columnName = columnName.substring(columnName.indexOf(":")+1);
         }
         return columnName;
-    }    
-    /**
-     * Convenience method to get all objects of the candidate type (and optional subclasses) from the 
-     * specified XML connection.
-     * @param om ObjectManager
-     * @param mconn Managed Connection
-     * @param candidateClass Candidate
-     * @param subclasses Include subclasses?
-     * @param ignoreCache Whether to ignore the cache
-     * @return List of objects of the candidate type (or subclass)
-     */
-    public static List getObjectsOfCandidateType(final ObjectManager om, HBaseManagedConnection mconn,
-            Class candidateClass, boolean subclasses, boolean ignoreCache)
-    {
-        List results = new ArrayList();
-        try
-        {
-            final ClassLoaderResolver clr = om.getClassLoaderResolver();
-            final AbstractClassMetaData acmd = om.getMetaDataManager().getMetaDataForClass(candidateClass,clr);
-
-            HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
-
-            Scan scan = new Scan();
-            int[] fieldNumbers =  acmd.getAllMemberPositions();
-            for(int i=0; i<fieldNumbers.length; i++)
-            {
-                byte[] familyNames = HBaseUtils.getFamilyName(acmd,fieldNumbers[i]).getBytes();
-                byte[] columnNames = HBaseUtils.getQualifierName(acmd, fieldNumbers[i]).getBytes();
-                scan.addColumn(familyNames,columnNames);
-            }
-            ResultScanner scanner = table.getScanner(scan);
-            Iterator<Result> it = scanner.iterator();
-            while(it.hasNext())
-            {
-                final Result result = it.next();
-                results.add(om.findObjectUsingAID(clr.classForName(acmd.getFullClassName()), new FieldValues()
-                {
-                    // StateManager calls the fetchFields method
-                    public void fetchFields(StateManager sm)
-                    {
-                        sm.replaceFields(acmd.getPKMemberPositions(), new HBaseFetchFieldManager(sm, result));
-                        sm.replaceFields(acmd.getBasicMemberPositions(clr, om.getMetaDataManager()), new HBaseFetchFieldManager(sm, result));
-                    }
-
-                    public void fetchNonLoadedFields(StateManager sm)
-                    {
-                        sm.replaceNonLoadedFields(acmd.getAllMemberPositions(), new HBaseFetchFieldManager(sm, result));
-                    }
-
-                    public FetchPlan getFetchPlanForLoading()
-                    {
-                        return null;
-                    }
-                }, ignoreCache, true));
-
-            }
-        }
-        catch (IOException e)
-        {
-            throw new NucleusDataStoreException(e.getMessage(), e);
-        }
-        return results;
     }
     
-    public static void createSchema(HBaseConfiguration config, AbstractClassMetaData acmd, boolean autoCreateColumns) throws IOException
+    /**
+     * Create a schema in HBase. Do not make this method public, since it uses privileged actions
+     * @param config
+     * @param acmd
+     * @param autoCreateColumns
+     */
+    static void createSchema(final HBaseConfiguration config, final AbstractClassMetaData acmd, final boolean autoCreateColumns)
     {
-        HBaseAdmin hBaseAdmin = new HBaseAdmin(config);
-        HTableDescriptor hTable;
-        String tableName = HBaseUtils.getTableName(acmd);
+
         try
         {
-            hTable = hBaseAdmin.getTableDescriptor(tableName.getBytes());
-        }
-        catch(TableNotFoundException ex)
-        {
-            hTable = new HTableDescriptor(tableName);
-            hBaseAdmin.createTable(hTable);
-        }
-
-        if (autoCreateColumns)
-        {
-            boolean modified = false;
-            if (!hTable.hasFamily(HBaseUtils.getTableName(acmd).getBytes()))
+            final HBaseAdmin hBaseAdmin = (HBaseAdmin) AccessController.doPrivileged(new PrivilegedExceptionAction()
             {
-                HColumnDescriptor hColumn = new HColumnDescriptor(HBaseUtils.getTableName(acmd));
-                hTable.addFamily(hColumn);
-                modified = true;
-            }
-            int[] fieldNumbers =  acmd.getAllMemberPositions();
-            for(int i=0; i<fieldNumbers.length; i++)
-            {            
-                String familyName = getFamilyName(acmd, fieldNumbers[i]);
-                if (!hTable.hasFamily(familyName.getBytes()))
+                public Object run() throws Exception
                 {
-                    HColumnDescriptor hColumn = new HColumnDescriptor(familyName);
+                    return new HBaseAdmin(config);
+                }
+            });
+            
+            final HTableDescriptor hTable = (HTableDescriptor) AccessController.doPrivileged(new PrivilegedExceptionAction()
+            {
+                public Object run() throws Exception
+                {
+                    String tableName = HBaseUtils.getTableName(acmd);
+                    HTableDescriptor hTable;
+                    try
+                    {
+                        hTable = hBaseAdmin.getTableDescriptor(tableName.getBytes());
+                    }
+                    catch(TableNotFoundException ex)
+                    {
+                        hTable = new HTableDescriptor(tableName);
+                        hBaseAdmin.createTable(hTable);
+                    }
+                    return hTable;
+                }
+            });
+
+            if (autoCreateColumns)
+            {
+                boolean modified = false;
+                if (!hTable.hasFamily(HBaseUtils.getTableName(acmd).getBytes()))
+                {
+                    HColumnDescriptor hColumn = new HColumnDescriptor(HBaseUtils.getTableName(acmd));
                     hTable.addFamily(hColumn);
                     modified = true;
                 }
-            }
-            if (modified)
-            {
-                hBaseAdmin.disableTable(hTable.getName());
-                hBaseAdmin.modifyTable(hTable.getName(), hTable);
-                hBaseAdmin.enableTable(hTable.getName());
+                int[] fieldNumbers =  acmd.getAllMemberPositions();
+                for(int i=0; i<fieldNumbers.length; i++)
+                {            
+                    String familyName = getFamilyName(acmd, fieldNumbers[i]);
+                    if (!hTable.hasFamily(familyName.getBytes()))
+                    {
+                        HColumnDescriptor hColumn = new HColumnDescriptor(familyName);
+                        hTable.addFamily(hColumn);
+                        modified = true;
+                    }
+                }
+                if (modified)
+                {
+                    AccessController.doPrivileged(new PrivilegedExceptionAction()
+                    {
+                        public Object run() throws Exception
+                        {
+                            hBaseAdmin.disableTable(hTable.getName());
+                            hBaseAdmin.modifyTable(hTable.getName(), hTable);
+                            hBaseAdmin.enableTable(hTable.getName());
+                            return null;
+                        }
+                    });
+                }
             }
         }
+        catch (PrivilegedActionException e)
+        {
+            throw new NucleusDataStoreException(e.getMessage(), e.getCause());
+        }
     }    
+    
 }

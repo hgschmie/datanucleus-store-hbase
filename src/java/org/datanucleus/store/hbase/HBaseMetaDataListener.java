@@ -17,9 +17,6 @@ Contributors:
 **********************************************************************/
 package org.datanucleus.store.hbase;
 
-import java.io.IOException;
-
-import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.InvalidMetaDataException;
@@ -55,14 +52,7 @@ public class HBaseMetaDataListener implements MetaDataListener
         }
         if (storeManager.isAutoCreateTables() || storeManager.isAutoCreateColumns())
         {
-            try 
-            {
-                HBaseUtils.createSchema(storeManager.getHbaseConfig(), cmd, storeManager.isAutoCreateColumns());
-            } 
-            catch (IOException e) 
-            {
-                throw new NucleusDataStoreException(e.getMessage(),e);
-            }
+            HBaseUtils.createSchema(storeManager.getHbaseConfig(), cmd, storeManager.isAutoCreateColumns());
         }
         
     }

@@ -28,7 +28,6 @@ import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.query.evaluator.JPQLEvaluator;
 import org.datanucleus.query.evaluator.JavaQueryEvaluator;
 import org.datanucleus.store.hbase.HBaseManagedConnection;
-import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.query.AbstractJPQLQuery;
 import org.datanucleus.util.NucleusLogger;
 
@@ -79,7 +78,7 @@ public class JPQLQuery extends AbstractJPQLQuery
             List candidates = null;
             if (candidateCollection == null)
             {
-                candidates = HBaseUtils.getObjectsOfCandidateType(om, mconn, candidateClass, subclasses,
+                candidates = HBaseQueryUtils.getObjectsOfCandidateType(om, mconn, candidateClass, subclasses,
                     ignoreCache);
             }
             else

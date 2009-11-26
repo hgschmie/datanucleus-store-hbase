@@ -27,7 +27,6 @@ import org.datanucleus.ObjectManager;
 import org.datanucleus.query.evaluator.JDOQLEvaluator;
 import org.datanucleus.query.evaluator.JavaQueryEvaluator;
 import org.datanucleus.store.hbase.HBaseManagedConnection;
-import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.query.AbstractJDOQLQuery;
 import org.datanucleus.util.NucleusLogger;
 
@@ -91,7 +90,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
             }
             else
             {
-                candidates = HBaseUtils.getObjectsOfCandidateType(om, mconn, candidateClass, subclasses,
+                candidates = HBaseQueryUtils.getObjectsOfCandidateType(om, mconn, candidateClass, subclasses,
                     ignoreCache);
             }
 
