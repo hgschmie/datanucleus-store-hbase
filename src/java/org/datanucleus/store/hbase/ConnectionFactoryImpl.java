@@ -20,7 +20,6 @@ package org.datanucleus.store.hbase;
 import java.util.Map;
 
 import org.datanucleus.OMFContext;
-import org.datanucleus.ObjectManager;
 import org.datanucleus.store.connection.AbstractConnectionFactory;
 import org.datanucleus.store.connection.ManagedConnection;
 
@@ -45,14 +44,15 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
     }
 
     /**
-     * Method to create a new managed connection.
-     * @param om ObjectManager
-     * @param transactionOptions Transaction options
-     * @return The connection
+     * Obtain a connection from the Factory. The connection will be enlisted within the {@link org.datanucleus.Transaction} 
+     * associated to the <code>poolKey</code> if "enlist" is set to true.
+     * @param poolKey the pool that is bound the connection during its lifecycle (or null)
+     * @param options Any options for then creating the connection
+     * @return the {@link org.datanucleus.store.connection.ManagedConnection}
      */
-    public ManagedConnection createManagedConnection(ObjectManager om, Map transactionOptions)
+    public ManagedConnection createManagedConnection(Object poolKey, Map transactionOptions)
     {
-        HBaseStoreManager storeManager = (HBaseStoreManager) om.getStoreManager();
+        HBaseStoreManager storeManager = (HBaseStoreManager) omfContext.getStoreManager();
                
         HBaseManagedConnection managedConnection = connectionPool.getPooledConnection();
         if (managedConnection == null) 
