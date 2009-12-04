@@ -30,11 +30,12 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.FetchPlan;
-import org.datanucleus.ObjectManager;
-import org.datanucleus.StateManager;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.metadata.AbstractClassMetaData;
-import org.datanucleus.store.FieldValues;
+import org.datanucleus.store.ExecutionContext;
+import org.datanucleus.store.FieldValues2;
+import org.datanucleus.store.ObjectProvider;
+import org.datanucleus.store.Type;
 import org.datanucleus.store.hbase.HBaseFetchFieldManager;
 import org.datanucleus.store.hbase.HBaseManagedConnection;
 import org.datanucleus.store.hbase.HBaseUtils;
@@ -51,7 +52,7 @@ class HBaseQueryUtils
      * @param ignoreCache Whether to ignore the cache
      * @return List of objects of the candidate type (or subclass)
      */
-    static List getObjectsOfCandidateType(final ObjectManager om, final HBaseManagedConnection mconn,
+    static List getObjectsOfCandidateType(final ExecutionContext om, final HBaseManagedConnection mconn,
             Class candidateClass, boolean subclasses, boolean ignoreCache)
     {
         List results = new ArrayList();
@@ -83,18 +84,18 @@ class HBaseQueryUtils
             while(it.hasNext())
             {
                 final Result result = it.next();
-                results.add(om.findObjectUsingAID(clr.classForName(acmd.getFullClassName()), new FieldValues()
+                results.add(om.findObjectUsingAID(new Type(clr.classForName(acmd.getFullClassName())), new FieldValues2()
                 {
                     // StateManager calls the fetchFields method
-                    public void fetchFields(StateManager sm)
+                    public void fetchFields(ObjectProvider sm)
                     {
-                        sm.replaceFields(acmd.getPKMemberPositions(), new HBaseFetchFieldManager(sm, result));
-                        sm.replaceFields(acmd.getBasicMemberPositions(clr, om.getMetaDataManager()), new HBaseFetchFieldManager(sm, result));
+                        sm.replaceFields(acmd.getPKMemberPositions(), new HBaseFetchFieldManager(acmd, result));
+                        sm.replaceFields(acmd.getBasicMemberPositions(clr, om.getMetaDataManager()), new HBaseFetchFieldManager(acmd, result));
                     }
 
-                    public void fetchNonLoadedFields(StateManager sm)
+                    public void fetchNonLoadedFields(ObjectProvider sm)
                     {
-                        sm.replaceNonLoadedFields(acmd.getAllMemberPositions(), new HBaseFetchFieldManager(sm, result));
+                        sm.replaceNonLoadedFields(acmd.getAllMemberPositions(), new HBaseFetchFieldManager(acmd, result));
                     }
 
                     public FetchPlan getFetchPlanForLoading()

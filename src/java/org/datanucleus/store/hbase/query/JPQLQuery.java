@@ -78,7 +78,7 @@ public class JPQLQuery extends AbstractJPQLQuery
             List candidates = null;
             if (candidateCollection == null)
             {
-                candidates = HBaseQueryUtils.getObjectsOfCandidateType(om, mconn, candidateClass, subclasses,
+                candidates = HBaseQueryUtils.getObjectsOfCandidateType(om.getExecutionContext(), mconn, candidateClass, subclasses,
                     ignoreCache);
             }
             else

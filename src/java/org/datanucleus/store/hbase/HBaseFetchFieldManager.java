@@ -22,25 +22,25 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 
 import org.apache.hadoop.hbase.client.Result;
-import org.datanucleus.StateManager;
 import org.datanucleus.exceptions.NucleusException;
+import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.store.fieldmanager.AbstractFieldManager;
 
 public class HBaseFetchFieldManager extends AbstractFieldManager
 {
     Result result;
-    StateManager sm;
+    AbstractClassMetaData acmd;
 
-    public HBaseFetchFieldManager(StateManager sm, Result result)
+    public HBaseFetchFieldManager(AbstractClassMetaData acmd, Result result)
     {
-        this.sm = sm;
+        this.acmd = acmd;
         this.result = result;
     }
 
     public boolean fetchBooleanField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
         boolean value;
         try
         {
@@ -60,8 +60,8 @@ public class HBaseFetchFieldManager extends AbstractFieldManager
     
     public byte fetchByteField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
         byte value;
         try
         {
@@ -81,8 +81,8 @@ public class HBaseFetchFieldManager extends AbstractFieldManager
     
     public char fetchCharField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
         char value;
         try
         {
@@ -102,8 +102,8 @@ public class HBaseFetchFieldManager extends AbstractFieldManager
     
     public double fetchDoubleField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
         double value;
         try
         {
@@ -123,8 +123,8 @@ public class HBaseFetchFieldManager extends AbstractFieldManager
     
     public float fetchFloatField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
         float value;
         try
         {
@@ -144,8 +144,8 @@ public class HBaseFetchFieldManager extends AbstractFieldManager
     
     public int fetchIntField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
         int value;
         try
         {
@@ -165,8 +165,8 @@ public class HBaseFetchFieldManager extends AbstractFieldManager
     
     public long fetchLongField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
         long value;
         try
         {
@@ -186,8 +186,8 @@ public class HBaseFetchFieldManager extends AbstractFieldManager
     
     public Object fetchObjectField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
         Object value;
         try
         {
@@ -218,8 +218,8 @@ public class HBaseFetchFieldManager extends AbstractFieldManager
     
     public short fetchShortField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
         short value;
         try
         {
@@ -239,8 +239,8 @@ public class HBaseFetchFieldManager extends AbstractFieldManager
     
     public String fetchStringField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(sm.getClassMetaData(),fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(sm.getClassMetaData(),fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
         String value;
         try
         {

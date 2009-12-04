@@ -56,7 +56,7 @@ public class HBaseStoreManager extends AbstractStoreManager
         omfContext.getMetaDataManager().registerListener(metadataListener);
 
         // Handler for persistence process
-        persistenceHandler = new HBasePersistenceHandler(this);
+        persistenceHandler2 = new HBasePersistenceHandler(this);
 
         hbaseConfig = new HBaseConfiguration();
 

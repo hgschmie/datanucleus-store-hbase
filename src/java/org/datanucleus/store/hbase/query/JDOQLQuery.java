@@ -90,7 +90,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
             }
             else
             {
-                candidates = HBaseQueryUtils.getObjectsOfCandidateType(om, mconn, candidateClass, subclasses,
+                candidates = HBaseQueryUtils.getObjectsOfCandidateType(om.getExecutionContext(), mconn, candidateClass, subclasses,
                     ignoreCache);
             }
 
