@@ -105,7 +105,7 @@ public class JPQLQuery extends AbstractJPQLQuery
                     Object obj = iter.next();
                     om.deleteObject(obj);
                 }
-                return new Long(results.size());
+                return Long.valueOf(results.size());
             }
             else if (type == BULK_UPDATE)
             {
