@@ -246,8 +246,10 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler2
             {
                 table.put(put);
             }
-            if( !put.isEmpty() )
+            if( !delete.isEmpty() )
             {
+            	//only delete if there are columns to delete. Otherwise an empty delete would cause the
+            	//entire row to be deleted
                 table.delete(delete);            
             }
             table.close();
