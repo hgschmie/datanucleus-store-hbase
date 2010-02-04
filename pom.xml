@@ -45,7 +45,7 @@
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hbase</artifactId>
-            <version>0.20.0</version>
+            <version>0.20.3</version>
         </dependency>
     </dependencies>
 
