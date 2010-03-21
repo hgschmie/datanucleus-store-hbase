@@ -23,10 +23,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.datanucleus.ObjectManager;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.query.evaluator.JPQLEvaluator;
 import org.datanucleus.query.evaluator.JavaQueryEvaluator;
+import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.hbase.HBaseManagedConnection;
 import org.datanucleus.store.query.AbstractJPQLQuery;
 import org.datanucleus.util.NucleusLogger;
@@ -40,7 +40,7 @@ public class JPQLQuery extends AbstractJPQLQuery
      * Constructs a new query instance that uses the given persistence manager.
      * @param om the associated ObjectManager for this query.
      */
-    public JPQLQuery(ObjectManager om)
+    public JPQLQuery(ExecutionContext om)
     {
         this(om, (JPQLQuery) null);
     }
@@ -50,7 +50,7 @@ public class JPQLQuery extends AbstractJPQLQuery
      * @param om The ObjectManager
      * @param q The query from which to copy criteria.
      */
-    public JPQLQuery(ObjectManager om, JPQLQuery q)
+    public JPQLQuery(ExecutionContext om, JPQLQuery q)
     {
         super(om, q);
     }
@@ -60,7 +60,7 @@ public class JPQLQuery extends AbstractJPQLQuery
      * @param om The persistence manager
      * @param query The query string
      */
-    public JPQLQuery(ObjectManager om, String query)
+    public JPQLQuery(ExecutionContext om, String query)
     {
         super(om, query);
     }
@@ -78,7 +78,7 @@ public class JPQLQuery extends AbstractJPQLQuery
             List candidates = null;
             if (candidateCollection == null)
             {
-                candidates = HBaseQueryUtils.getObjectsOfCandidateType(om.getExecutionContext(), mconn, candidateClass, subclasses,
+                candidates = HBaseQueryUtils.getObjectsOfCandidateType(om, mconn, candidateClass, subclasses,
                     ignoreCache);
             }
             else

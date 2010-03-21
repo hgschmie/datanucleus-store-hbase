@@ -24,10 +24,10 @@ import java.util.Set;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.OMFContext;
-import org.datanucleus.ObjectManager;
 import org.datanucleus.PersistenceConfiguration;
 import org.datanucleus.metadata.MetaDataListener;
 import org.datanucleus.store.AbstractStoreManager;
+import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.NucleusConnection;
 
 public class HBaseStoreManager extends AbstractStoreManager
@@ -105,7 +105,7 @@ public class HBaseStoreManager extends AbstractStoreManager
         super.close();
     }
 
-    public NucleusConnection getNucleusConnection(ObjectManager om)
+    public NucleusConnection getNucleusConnection(ExecutionContext om)
     {
         throw new UnsupportedOperationException();
     }

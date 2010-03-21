@@ -23,9 +23,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.datanucleus.ObjectManager;
 import org.datanucleus.query.evaluator.JDOQLEvaluator;
 import org.datanucleus.query.evaluator.JavaQueryEvaluator;
+import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.hbase.HBaseManagedConnection;
 import org.datanucleus.store.query.AbstractJDOQLQuery;
 import org.datanucleus.util.NucleusLogger;
@@ -39,7 +39,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
      * Constructs a new query instance that uses the given persistence manager.
      * @param om the associated ObjectManager for this query.
      */
-    public JDOQLQuery(ObjectManager om)
+    public JDOQLQuery(ExecutionContext om)
     {
         this(om, (JDOQLQuery) null);
     }
@@ -49,7 +49,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
      * @param om The ObjectManager
      * @param q The query from which to copy criteria.
      */
-    public JDOQLQuery(ObjectManager om, JDOQLQuery q)
+    public JDOQLQuery(ExecutionContext om, JDOQLQuery q)
     {
         super(om, q);
     }
@@ -59,7 +59,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
      * @param om The persistence manager
      * @param query The query string
      */
-    public JDOQLQuery(ObjectManager om, String query)
+    public JDOQLQuery(ExecutionContext om, String query)
     {
         super(om, query);
     }
@@ -90,7 +90,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
             }
             else
             {
-                candidates = HBaseQueryUtils.getObjectsOfCandidateType(om.getExecutionContext(), mconn, candidateClass, subclasses,
+                candidates = HBaseQueryUtils.getObjectsOfCandidateType(om, mconn, candidateClass, subclasses,
                     ignoreCache);
             }
 
