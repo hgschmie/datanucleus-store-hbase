@@ -126,7 +126,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler2
             throw new NucleusUserException(LOCALISER.msg("HBase.Insert.ObjectWithIdAlreadyExists"));
             //TODO add JVM ID of object
 //            throw new NucleusUserException(LOCALISER.msg("HBase.Insert.ObjectWithIdAlreadyExists",
-  //              StringUtils.toJVMIDString(sm.getObject()), sm.getInternalObjectId()));
+  //              sm.toPrintableID(), sm.getInternalObjectId()));
         }
         catch (NucleusObjectNotFoundException onfe)
         {
