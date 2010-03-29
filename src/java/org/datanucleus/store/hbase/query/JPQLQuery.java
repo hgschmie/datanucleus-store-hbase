@@ -67,7 +67,7 @@ public class JPQLQuery extends AbstractJPQLQuery
 
     protected Object performExecute(Map parameters)
     {
-        HBaseManagedConnection mconn = (HBaseManagedConnection) om.getStoreManager().getConnection(om);
+        HBaseManagedConnection mconn = (HBaseManagedConnection) ec.getStoreManager().getConnection(ec);
         try
         {
             long startTime = System.currentTimeMillis();
@@ -78,7 +78,7 @@ public class JPQLQuery extends AbstractJPQLQuery
             List candidates = null;
             if (candidateCollection == null)
             {
-                candidates = HBaseQueryUtils.getObjectsOfCandidateType(om, mconn, candidateClass, subclasses,
+                candidates = HBaseQueryUtils.getObjectsOfCandidateType(ec, mconn, candidateClass, subclasses,
                     ignoreCache);
             }
             else
@@ -88,7 +88,7 @@ public class JPQLQuery extends AbstractJPQLQuery
 
             // Apply any result restrictions to the results
             JavaQueryEvaluator resultMapper = new JPQLEvaluator(this, candidates, compilation, 
-                parameters, om.getClassLoaderResolver());
+                parameters, ec.getClassLoaderResolver());
             Collection results = resultMapper.execute(true, true, true, true, true);
 
             if (NucleusLogger.QUERY.isDebugEnabled())
@@ -103,7 +103,7 @@ public class JPQLQuery extends AbstractJPQLQuery
                 while (iter.hasNext())
                 {
                     Object obj = iter.next();
-                    om.deleteObject(obj);
+                    ec.deleteObject(obj);
                 }
                 return Long.valueOf(results.size());
             }
