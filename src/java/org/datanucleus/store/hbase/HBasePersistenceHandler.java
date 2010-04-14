@@ -30,13 +30,13 @@ import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusObjectNotFoundException;
 import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
-import org.datanucleus.store.AbstractPersistenceHandler2;
+import org.datanucleus.store.AbstractPersistenceHandler;
 import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.ObjectProvider;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.util.Localiser;
 
-public class HBasePersistenceHandler extends AbstractPersistenceHandler2
+public class HBasePersistenceHandler extends AbstractPersistenceHandler
 {
     /** Localiser for messages. */
     protected static final Localiser LOCALISER = Localiser.getInstance(
