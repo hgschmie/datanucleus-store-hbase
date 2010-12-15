@@ -23,7 +23,7 @@ import java.util.Set;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.datanucleus.ClassLoaderResolver;
-import org.datanucleus.OMFContext;
+import org.datanucleus.NucleusContext;
 import org.datanucleus.PersistenceConfiguration;
 import org.datanucleus.metadata.MetaDataListener;
 import org.datanucleus.store.AbstractStoreManager;
@@ -45,22 +45,22 @@ public class HBaseStoreManager extends AbstractStoreManager
     /**
      * Constructor.
      * @param clr ClassLoader resolver
-     * @param omfContext ObjectManagerFactory context
+     * @param ctx context
      */
-    public HBaseStoreManager(ClassLoaderResolver clr, OMFContext omfContext)
+    public HBaseStoreManager(ClassLoaderResolver clr, NucleusContext ctx)
     {
-        super("hbase", clr, omfContext);
+        super("hbase", clr, ctx);
                 
         // Handler for metadata
         metadataListener = new HBaseMetaDataListener(this);
-        omfContext.getMetaDataManager().registerListener(metadataListener);
+        ctx.getMetaDataManager().registerListener(metadataListener);
 
         // Handler for persistence process
         persistenceHandler2 = new HBasePersistenceHandler(this);
 
         hbaseConfig = new HBaseConfiguration();
 
-        PersistenceConfiguration conf = omfContext.getPersistenceConfiguration();
+        PersistenceConfiguration conf = ctx.getPersistenceConfiguration();
         boolean autoCreateSchema = conf.getBooleanProperty("datanucleus.autoCreateSchema");
         if (autoCreateSchema)
         {
@@ -101,7 +101,7 @@ public class HBaseStoreManager extends AbstractStoreManager
      */
     public void close()
     {
-        omfContext.getMetaDataManager().deregisterListener(metadataListener);
+        nucleusContext.getMetaDataManager().deregisterListener(metadataListener);
         super.close();
     }
 

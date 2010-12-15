@@ -19,7 +19,7 @@ package org.datanucleus.store.hbase;
 
 import java.util.Map;
 
-import org.datanucleus.OMFContext;
+import org.datanucleus.NucleusContext;
 import org.datanucleus.store.connection.AbstractConnectionFactory;
 import org.datanucleus.store.connection.ManagedConnection;
 
@@ -32,13 +32,13 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
 
     /**
      * Constructor.
-     * @param omfContext The OMF context
+     * @param ctx The context
      * @param resourceType Type of resource (tx, nontx)
      */
-    public ConnectionFactoryImpl(OMFContext omfContext, String resourceType)
+    public ConnectionFactoryImpl(NucleusContext ctx, String resourceType)
     {
-        super(omfContext, resourceType);
-        HBaseStoreManager storeManager = (HBaseStoreManager) omfContext.getStoreManager();
+        super(ctx, resourceType);
+        HBaseStoreManager storeManager = (HBaseStoreManager) ctx.getStoreManager();
         connectionPool = new HBaseConnectionPool();
         connectionPool.setTimeBetweenEvictionRunsMillis(storeManager.getPoolTimeBetweenEvictionRunsMillis());
     }
@@ -52,7 +52,7 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
      */
     public ManagedConnection createManagedConnection(Object poolKey, Map transactionOptions)
     {
-        HBaseStoreManager storeManager = (HBaseStoreManager) omfContext.getStoreManager();
+        HBaseStoreManager storeManager = (HBaseStoreManager) nucleusContext.getStoreManager();
                
         HBaseManagedConnection managedConnection = connectionPool.getPooledConnection();
         if (managedConnection == null) 
