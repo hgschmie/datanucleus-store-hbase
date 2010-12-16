@@ -56,7 +56,7 @@ public class HBaseStoreManager extends AbstractStoreManager
         ctx.getMetaDataManager().registerListener(metadataListener);
 
         // Handler for persistence process
-        persistenceHandler2 = new HBasePersistenceHandler(this);
+        persistenceHandler = new HBasePersistenceHandler(this);
 
         hbaseConfig = new HBaseConfiguration();
 
