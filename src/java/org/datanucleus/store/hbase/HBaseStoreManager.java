@@ -19,6 +19,7 @@ package org.datanucleus.store.hbase;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -47,9 +48,9 @@ public class HBaseStoreManager extends AbstractStoreManager
      * @param clr ClassLoader resolver
      * @param ctx context
      */
-    public HBaseStoreManager(ClassLoaderResolver clr, NucleusContext ctx)
+    public HBaseStoreManager(ClassLoaderResolver clr, NucleusContext ctx, Map<String, Object> props)
     {
-        super("hbase", clr, ctx);
+        super("hbase", clr, ctx, props);
                 
         // Handler for metadata
         metadataListener = new HBaseMetaDataListener(this);
