@@ -25,7 +25,6 @@ import java.util.Set;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.NucleusContext;
-import org.datanucleus.PersistenceConfiguration;
 import org.datanucleus.metadata.MetaDataListener;
 import org.datanucleus.store.AbstractStoreManager;
 import org.datanucleus.store.ExecutionContext;
@@ -56,13 +55,10 @@ public class HBaseStoreManager extends AbstractStoreManager
         metadataListener = new HBaseMetaDataListener(this);
         ctx.getMetaDataManager().registerListener(metadataListener);
 
-        // Handler for persistence process
         persistenceHandler = new HBasePersistenceHandler(this);
-
         hbaseConfig = new HBaseConfiguration();
 
-        PersistenceConfiguration conf = ctx.getPersistenceConfiguration();
-        boolean autoCreateSchema = conf.getBooleanProperty("datanucleus.autoCreateSchema");
+        boolean autoCreateSchema = getBooleanProperty("datanucleus.autoCreateSchema");
         if (autoCreateSchema)
         {
             autoCreateTables = true;
@@ -70,18 +66,19 @@ public class HBaseStoreManager extends AbstractStoreManager
         }
         else
         {
-            autoCreateTables = conf.getBooleanProperty("datanucleus.autoCreateTables");
-            autoCreateColumns = conf.getBooleanProperty("datanucleus.autoCreateColumns");
-        }        
+            autoCreateTables = getBooleanProperty("datanucleus.autoCreateTables");
+            autoCreateColumns = getBooleanProperty("datanucleus.autoCreateColumns");
+        }
+
         // how often should the evictor run
-        poolTimeBetweenEvictionRunsMillis = conf.getIntProperty("datanucleus.connectionPool.timeBetweenEvictionRunsMillis");
+        poolTimeBetweenEvictionRunsMillis = getIntProperty("datanucleus.connectionPool.timeBetweenEvictionRunsMillis");
         if (poolTimeBetweenEvictionRunsMillis == 0)
         {
             poolTimeBetweenEvictionRunsMillis = 15 * 1000; // default, 15 secs
         }
          
         // how long may a connection sit idle in the pool before it may be evicted
-        poolMinEvictableIdleTimeMillis = conf.getIntProperty("datanucleus.connectionPool.minEvictableIdleTimeMillis");
+        poolMinEvictableIdleTimeMillis = getIntProperty("datanucleus.connectionPool.minEvictableIdleTimeMillis");
         if (poolMinEvictableIdleTimeMillis == 0)
         {
             poolMinEvictableIdleTimeMillis = 30 * 1000; // default, 30 secs
