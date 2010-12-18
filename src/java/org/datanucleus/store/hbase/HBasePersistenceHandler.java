@@ -34,6 +34,8 @@ import org.datanucleus.store.AbstractPersistenceHandler;
 import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.ObjectProvider;
 import org.datanucleus.store.StoreManager;
+import org.datanucleus.store.hbase.fieldmanager.HBaseFetchFieldManager;
+import org.datanucleus.store.hbase.fieldmanager.HBaseInsertFieldManager;
 import org.datanucleus.util.Localiser;
 
 public class HBasePersistenceHandler extends AbstractPersistenceHandler

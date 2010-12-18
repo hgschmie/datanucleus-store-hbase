@@ -36,9 +36,9 @@ import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.FieldValues2;
 import org.datanucleus.store.ObjectProvider;
 import org.datanucleus.store.Type;
-import org.datanucleus.store.hbase.HBaseFetchFieldManager;
 import org.datanucleus.store.hbase.HBaseManagedConnection;
 import org.datanucleus.store.hbase.HBaseUtils;
+import org.datanucleus.store.hbase.fieldmanager.HBaseFetchFieldManager;
 
 class HBaseQueryUtils
 {

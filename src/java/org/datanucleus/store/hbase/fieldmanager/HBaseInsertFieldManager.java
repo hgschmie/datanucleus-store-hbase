@@ -15,7 +15,7 @@ limitations under the License.
 Contributors :
     ...
 ***********************************************************************/
-package org.datanucleus.store.hbase;
+package org.datanucleus.store.hbase.fieldmanager;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.store.fieldmanager.AbstractFieldManager;
+import org.datanucleus.store.hbase.HBaseUtils;
 
 public class HBaseInsertFieldManager extends AbstractFieldManager
 {
