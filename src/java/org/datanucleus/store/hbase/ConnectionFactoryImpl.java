@@ -19,15 +19,21 @@ package org.datanucleus.store.hbase;
 
 import java.util.Map;
 
+import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.connection.AbstractConnectionFactory;
 import org.datanucleus.store.connection.ManagedConnection;
+import org.datanucleus.util.Localiser;
 
 /**
  * Implementation of a ConnectionFactory for HBase.
  */
 public class ConnectionFactoryImpl extends AbstractConnectionFactory
 {
+    /** Localiser for messages. */
+    protected static final Localiser LOCALISER_HBASE = Localiser.getInstance(
+        "org.datanucleus.store.hbase.Localisation", HBaseStoreManager.class.getClassLoader());
+
     private HBaseConnectionPool connectionPool;
 
     /**
@@ -40,6 +46,26 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
         super(storeMgr, resourceType);
         connectionPool = new HBaseConnectionPool();
         connectionPool.setTimeBetweenEvictionRunsMillis(((HBaseStoreManager)storeMgr).getPoolTimeBetweenEvictionRunsMillis());
+
+        String url = storeMgr.getConnectionURL();
+        if (!url.startsWith("hbase"))
+        {
+            throw new NucleusException(LOCALISER_HBASE.msg("HBase.URLInvalid", url));
+        }
+
+        // Split the URL into local, or "host:port"
+        String hbaseStr = url.substring(5); // Omit the hbase prefix, and any colon
+        if (hbaseStr.startsWith(":"))
+        {
+            hbaseStr = hbaseStr.substring(1);
+        }
+
+        if (hbaseStr.length() > 0)
+        {
+            // Remote, so specify server
+            HBaseStoreManager hbaseStoreMgr = (HBaseStoreManager)storeMgr;
+            hbaseStoreMgr.getHbaseConfig().set("hbase.zookeeper.quorum", hbaseStr);
+        }
     }
 
     /**
