@@ -26,7 +26,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class HBaseConnectionPool
 {
-
     private final List<HBaseManagedConnection> connections;
 
     private final ThreadLocal<WeakReference<HBaseManagedConnection>> connectionForCurrentThread;
@@ -95,14 +94,12 @@ public class HBaseConnectionPool
             managedConnection.dispose();
             connections.remove(managedConnection);
         }
-
     }
 
     private void startConnectionEvictorThread(Timer connectionTimeoutThread)
     {
         TimerTask timeoutTask = new TimerTask()
         {
-
             public void run()
             {
                 disposeTimedOutConnections();
@@ -111,5 +108,4 @@ public class HBaseConnectionPool
 
         evictorThread.schedule(timeoutTask, timeBetweenEvictionRunsMillis, timeBetweenEvictionRunsMillis);
     }
-
 }

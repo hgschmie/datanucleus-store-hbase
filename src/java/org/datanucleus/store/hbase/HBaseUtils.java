@@ -96,7 +96,6 @@ public class HBaseUtils
      */
     static void createSchema(final HBaseConfiguration config, final AbstractClassMetaData acmd, final boolean autoCreateColumns)
     {
-
         try
         {
             final HBaseAdmin hBaseAdmin = (HBaseAdmin) AccessController.doPrivileged(new PrivilegedExceptionAction()
@@ -165,6 +164,5 @@ public class HBaseUtils
         {
             throw new NucleusDataStoreException(e.getMessage(), e.getCause());
         }
-    }    
-    
+    }
 }

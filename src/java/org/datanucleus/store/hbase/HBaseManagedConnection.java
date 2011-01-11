@@ -175,5 +175,4 @@ public class HBaseManagedConnection extends AbstractManagedConnection
 			}
 		}
 	}
-
 }

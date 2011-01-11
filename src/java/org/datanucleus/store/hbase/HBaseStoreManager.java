@@ -41,7 +41,7 @@ public class HBaseStoreManager extends AbstractStoreManager
 
     private int poolTimeBetweenEvictionRunsMillis; 
     private int poolMinEvictableIdleTimeMillis;
-    
+
     /**
      * Constructor.
      * @param clr ClassLoader resolver
@@ -93,7 +93,6 @@ public class HBaseStoreManager extends AbstractStoreManager
         this.connectionMgr.disableConnectionPool();
     }
 
-
     /**
      * Release of resources
      */
@@ -109,13 +108,15 @@ public class HBaseStoreManager extends AbstractStoreManager
     }
 
     /**
-     * Accessor for the supported options in string form
+     * Accessor for the supported options in string form.
+     * @return Supported options for this store manager
      */
     public Collection getSupportedOptions()
     {
         Set set = new HashSet();
         set.add("ApplicationIdentity");
         set.add("TransactionIsolationLevel.read-committed");
+        set.add("ORM");
         return set;
     }
     

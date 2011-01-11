@@ -39,7 +39,7 @@ public class HBaseMetaDataListener implements MetaDataListener
     {
         this.storeManager = storeManager;
     }
-    
+
     /* (non-Javadoc)
      * @see org.datanucleus.metadata.MetaDataListener#loaded(org.datanucleus.metadata.AbstractClassMetaData)
      */
