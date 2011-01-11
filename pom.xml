@@ -6,7 +6,7 @@
     <artifactId>datanucleus-hbase</artifactId>
     <name>DataNucleus HBase plugin</name>
     <description>
-        DataNucleus supports persistence to heterogeneous datastores and this plugin provides persistence to HBase.
+        Plugin providing persistence to HBase datastores.
     </description>
 
     <repositories>
