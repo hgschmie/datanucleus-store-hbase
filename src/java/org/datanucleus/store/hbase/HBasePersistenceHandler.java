@@ -34,8 +34,8 @@ import org.datanucleus.store.AbstractPersistenceHandler;
 import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.ObjectProvider;
 import org.datanucleus.store.StoreManager;
-import org.datanucleus.store.hbase.fieldmanager.HBaseFetchFieldManager;
-import org.datanucleus.store.hbase.fieldmanager.HBaseInsertFieldManager;
+import org.datanucleus.store.hbase.fieldmanager.FetchFieldManager;
+import org.datanucleus.store.hbase.fieldmanager.InsertFieldManager;
 import org.datanucleus.util.Localiser;
 
 public class HBasePersistenceHandler extends AbstractPersistenceHandler
@@ -92,7 +92,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             {
                 throw new NucleusObjectNotFoundException();
             }
-            HBaseFetchFieldManager fm = new HBaseFetchFieldManager(acmd, result);
+            FetchFieldManager fm = new FetchFieldManager(acmd, result);
             sm.replaceFields(acmd.getAllMemberPositions(), fm);
             table.close();
         }
@@ -142,7 +142,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
             Put put = newPut(sm);
             Delete delete = newDelete(sm);
-            HBaseInsertFieldManager fm = new HBaseInsertFieldManager(acmd, put, delete);
+            InsertFieldManager fm = new InsertFieldManager(acmd, put, delete);
             sm.provideFields(acmd.getAllMemberPositions(), fm);
             table.put(put);
             table.close();
@@ -242,7 +242,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
             Put put = newPut(sm);
             Delete delete = newDelete(sm); // we will ignore the delete object
-            HBaseInsertFieldManager fm = new HBaseInsertFieldManager(acmd, put, delete);
+            InsertFieldManager fm = new InsertFieldManager(acmd, put, delete);
             sm.provideFields(fieldNumbers, fm);
             if( !put.isEmpty() )
             {

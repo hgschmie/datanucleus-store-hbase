@@ -39,7 +39,7 @@ import org.datanucleus.store.Type;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseManagedConnection;
 import org.datanucleus.store.hbase.HBaseUtils;
-import org.datanucleus.store.hbase.fieldmanager.HBaseFetchFieldManager;
+import org.datanucleus.store.hbase.fieldmanager.FetchFieldManager;
 
 class HBaseQueryUtils
 {
@@ -90,14 +90,14 @@ class HBaseQueryUtils
                     // StateManager calls the fetchFields method
                     public void fetchFields(ObjectProvider sm)
                     {
-                        FieldManager fm = new HBaseFetchFieldManager(acmd, result);
+                        FieldManager fm = new FetchFieldManager(acmd, result);
                         sm.replaceFields(acmd.getPKMemberPositions(), fm);
                         sm.replaceFields(acmd.getBasicMemberPositions(clr, om.getMetaDataManager()), fm);
                     }
 
                     public void fetchNonLoadedFields(ObjectProvider sm)
                     {
-                        sm.replaceNonLoadedFields(acmd.getAllMemberPositions(), new HBaseFetchFieldManager(acmd, result));
+                        sm.replaceNonLoadedFields(acmd.getAllMemberPositions(), new FetchFieldManager(acmd, result));
                     }
 
                     public FetchPlan getFetchPlanForLoading()

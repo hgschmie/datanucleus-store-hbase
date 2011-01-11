@@ -27,12 +27,12 @@ import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.store.fieldmanager.AbstractFieldManager;
 import org.datanucleus.store.hbase.HBaseUtils;
 
-public class HBaseFetchFieldManager extends AbstractFieldManager
+public class FetchFieldManager extends AbstractFieldManager
 {
     Result result;
     AbstractClassMetaData acmd;
 
-    public HBaseFetchFieldManager(AbstractClassMetaData acmd, Result result)
+    public FetchFieldManager(AbstractClassMetaData acmd, Result result)
     {
         this.acmd = acmd;
         this.result = result;

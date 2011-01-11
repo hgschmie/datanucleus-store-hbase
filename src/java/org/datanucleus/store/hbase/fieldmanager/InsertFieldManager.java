@@ -28,13 +28,13 @@ import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.store.fieldmanager.AbstractFieldManager;
 import org.datanucleus.store.hbase.HBaseUtils;
 
-public class HBaseInsertFieldManager extends AbstractFieldManager
+public class InsertFieldManager extends AbstractFieldManager
 {
     Put put;
     Delete delete;
     AbstractClassMetaData acmd;
 
-    public HBaseInsertFieldManager(AbstractClassMetaData acmd, Put put, Delete delete)
+    public InsertFieldManager(AbstractClassMetaData acmd, Put put, Delete delete)
     {
         this.acmd = acmd;
         this.put = put;
