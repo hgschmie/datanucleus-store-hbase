@@ -63,8 +63,16 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
         if (hbaseStr.length() > 0)
         {
             // Remote, so specify server
+            String serverName = hbaseStr;
+            String portName = "60000";
+            if (hbaseStr.indexOf(':') > 0)
+            {
+                serverName = hbaseStr.substring(0, hbaseStr.indexOf(':'));
+                portName = hbaseStr.substring(hbaseStr.indexOf(':')+1);
+            }
             HBaseStoreManager hbaseStoreMgr = (HBaseStoreManager)storeMgr;
-            hbaseStoreMgr.getHbaseConfig().set("hbase.zookeeper.quorum", hbaseStr);
+            hbaseStoreMgr.getHbaseConfig().set("hbase.zookeeper.quorum", serverName);
+            hbaseStoreMgr.getHbaseConfig().set("hbase.master", serverName + ":" + portName);
         }
     }
 
