@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 Contributors :
+2011 Andy Jefferson - clean up of NPE code
     ...
 ***********************************************************************/
 package org.datanucleus.store.hbase.fieldmanager;
@@ -40,11 +41,11 @@ public class InsertFieldManager extends AbstractFieldManager
         this.put = put;
         this.delete = delete;
     }
-    
+
     public void storeBooleanField(int fieldNumber, boolean value)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
 
         try
         {
@@ -61,18 +62,18 @@ public class InsertFieldManager extends AbstractFieldManager
             throw new NucleusException(e.getMessage(), e);
         }
     }
-    
+
     public void storeByteField(int fieldNumber, byte value)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
         put.add(familyName.getBytes(), columnName.getBytes(), new byte[]{value});
     }
 
     public void storeCharField(int fieldNumber, char value)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
         try
         {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -88,11 +89,11 @@ public class InsertFieldManager extends AbstractFieldManager
             throw new NucleusException(e.getMessage(), e);
         }
     }
-    
+
     public void storeDoubleField(int fieldNumber, double value)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
         try
         {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -108,11 +109,11 @@ public class InsertFieldManager extends AbstractFieldManager
             throw new NucleusException(e.getMessage(), e);
         }
     }
-    
+
     public void storeFloatField(int fieldNumber, float value)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
         try
         {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -128,11 +129,11 @@ public class InsertFieldManager extends AbstractFieldManager
             throw new NucleusException(e.getMessage(), e);
         }
     }
-    
+
     public void storeIntField(int fieldNumber, int value)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
         try
         {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -148,11 +149,11 @@ public class InsertFieldManager extends AbstractFieldManager
             throw new NucleusException(e.getMessage(), e);
         }
     }
-    
+
     public void storeLongField(int fieldNumber, long value)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
         try
         {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -168,12 +169,12 @@ public class InsertFieldManager extends AbstractFieldManager
             throw new NucleusException(e.getMessage(), e);
         }
     }
-    
+
     public void storeObjectField(int fieldNumber, Object value)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
-        if(value==null)
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        if (value == null)
         {
             delete.deleteColumn(familyName.getBytes(), columnName.getBytes());
         }
@@ -194,11 +195,11 @@ public class InsertFieldManager extends AbstractFieldManager
             }
         }
     }
-    
+
     public void storeShortField(int fieldNumber, short value)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
         try
         {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -214,12 +215,12 @@ public class InsertFieldManager extends AbstractFieldManager
             throw new NucleusException(e.getMessage(), e);
         }
     }
-    
+
     public void storeStringField(int fieldNumber, String value)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
-        if(value==null)
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        if (value == null)
         {
             delete.deleteColumn(familyName.getBytes(), columnName.getBytes());
         }

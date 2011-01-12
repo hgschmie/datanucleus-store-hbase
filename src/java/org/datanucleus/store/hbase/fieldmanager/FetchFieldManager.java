@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 Contributors :
+2011 Andy Jefferson - clean up of NPE code
     ...
 ***********************************************************************/
 package org.datanucleus.store.hbase.fieldmanager;
@@ -40,8 +41,8 @@ public class FetchFieldManager extends AbstractFieldManager
 
     public boolean fetchBooleanField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
         boolean value;
         try
         {
@@ -58,11 +59,11 @@ public class FetchFieldManager extends AbstractFieldManager
         }
         return value;
     }
-    
+
     public byte fetchByteField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
         byte value;
         try
         {
@@ -79,11 +80,11 @@ public class FetchFieldManager extends AbstractFieldManager
         }
         return value;
     }
-    
+
     public char fetchCharField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
         char value;
         try
         {
@@ -100,11 +101,11 @@ public class FetchFieldManager extends AbstractFieldManager
         }
         return value;    
     }
-    
+
     public double fetchDoubleField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
         double value;
         try
         {
@@ -121,11 +122,11 @@ public class FetchFieldManager extends AbstractFieldManager
         }
         return value; 
     }
-    
+
     public float fetchFloatField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
         float value;
         try
         {
@@ -142,11 +143,11 @@ public class FetchFieldManager extends AbstractFieldManager
         }
         return value;
     }
-    
+
     public int fetchIntField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
         int value;
         try
         {
@@ -163,11 +164,11 @@ public class FetchFieldManager extends AbstractFieldManager
         }
         return value;
     }
-    
+
     public long fetchLongField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
         long value;
         try
         {
@@ -184,24 +185,24 @@ public class FetchFieldManager extends AbstractFieldManager
         }
         return value;
     }
-    
+
     public Object fetchObjectField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
         Object value;
         try
         {
-            try
+            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+            if (bytes != null)
             {
-                byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
                 ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
                 ObjectInputStream ois = new ObjectInputStream(bis);
                 value = ois.readObject();
                 ois.close();
                 bis.close();
             }
-            catch(NullPointerException ex)
+            else
             {
                 return null;
             }
@@ -216,11 +217,11 @@ public class FetchFieldManager extends AbstractFieldManager
         }
         return value;
     }
-    
+
     public short fetchShortField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
         short value;
         try
         {
@@ -237,24 +238,24 @@ public class FetchFieldManager extends AbstractFieldManager
         }
         return value;
     }
-    
+
     public String fetchStringField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd,fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd,fieldNumber);
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
         String value;
         try
         {
-            try
+            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+            if (bytes != null)
             {
-                byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
                 ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
                 ObjectInputStream ois = new ObjectInputStream(bis);
                 value = (String) ois.readObject();
                 ois.close();
                 bis.close();
             }
-            catch(NullPointerException ex)
+            else
             {
                 return null;
             }
