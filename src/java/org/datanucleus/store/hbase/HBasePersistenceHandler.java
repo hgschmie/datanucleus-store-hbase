@@ -34,8 +34,10 @@ import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusObjectNotFoundException;
 import org.datanucleus.exceptions.NucleusUserException;
+import org.datanucleus.identity.OID;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
+import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.metadata.VersionStrategy;
 import org.datanucleus.store.AbstractPersistenceHandler;
@@ -77,25 +79,58 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             storeMgr.addClass(sm.getClassMetaData().getFullClassName(),sm.getExecutionContext().getClassLoaderResolver());
         }
 
-        try
+        AbstractClassMetaData cmd = sm.getClassMetaData();
+        if (cmd.getIdentityType() == IdentityType.APPLICATION || cmd.getIdentityType() == IdentityType.DATASTORE)
         {
-            // Check existence of the object since HBase doesn't enforce application identity
-            locateObject(sm);
-            throw new NucleusUserException(LOCALISER.msg("HBase.Insert.ObjectWithIdAlreadyExists", 
-                sm.toPrintableID(), sm.getInternalObjectId()));
-        }
-        catch (NucleusObjectNotFoundException onfe)
-        {
-            // Do nothing since object with this id doesn't exist
+            // Enforce uniqueness of datastore rows
+            try
+            {
+                locateObject(sm);
+                throw new NucleusUserException(LOCALISER.msg("HBase.Insert.ObjectWithIdAlreadyExists", 
+                    sm.toPrintableID(), sm.getInternalObjectId()));
+            }
+            catch (NucleusObjectNotFoundException onfe)
+            {
+                // Do nothing since object with this id doesn't exist
+            }
         }
 
         HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(sm.getExecutionContext());
         try
         {
+            long startTime = System.currentTimeMillis();
+            if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
+            {
+                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER.msg("HBase.Insert.Start", 
+                    sm.toPrintableID(), sm.getInternalObjectId()));
+            }
+
             AbstractClassMetaData acmd = sm.getClassMetaData();
             HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
             Put put = newPut(sm);
             Delete delete = newDelete(sm);
+
+            if (acmd.getIdentityType() == IdentityType.DATASTORE)
+            {
+                String familyName = HBaseUtils.getFamilyName(cmd.getIdentityMetaData());
+                String columnName = HBaseUtils.getQualifierName(cmd.getIdentityMetaData());
+                Object key = ((OID)sm.getInternalObjectId()).getKeyValue();
+                try
+                {
+                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                    ObjectOutputStream oos = new ObjectOutputStream(bos);
+                    oos.writeObject(key);
+                    oos.flush();
+                    put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                    oos.close();
+                    bos.close();
+                }
+                catch (IOException e)
+                {
+                    throw new NucleusException(e.getMessage(), e);
+                }
+            }
+
             if (acmd.hasVersionStrategy())
             {
                 String familyName = HBaseUtils.getFamilyName(acmd.getVersionMetaData());
@@ -123,7 +158,6 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     {
                         try
                         {
-                            NucleusLogger.GENERAL.info(">> insertObject setting VERSION");
                             ByteArrayOutputStream bos = new ByteArrayOutputStream();
                             ObjectOutputStream oos = new ObjectOutputStream(bos);
                             oos.writeLong(versionNumber);
@@ -157,7 +191,6 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     {
                         try
                         {
-                            NucleusLogger.GENERAL.info(">> insertObject setting VERSION");
                             ByteArrayOutputStream bos = new ByteArrayOutputStream();
                             ObjectOutputStream oos = new ObjectOutputStream(bos);
                             oos.writeObject(ts);
@@ -178,6 +211,16 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
             table.put(put);
             table.close();
+
+            if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
+            {
+                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER.msg("HBase.ExecutionTime", 
+                    (System.currentTimeMillis() - startTime)));
+            }
+            if (storeMgr.getRuntimeManager() != null)
+            {
+                storeMgr.getRuntimeManager().incrementInsertCount();
+            }
         }
         catch (IOException e)
         {
@@ -387,32 +430,46 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
     public void locateObject(ObjectProvider sm)
     {
-        HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(sm.getExecutionContext());
-        try
+        final AbstractClassMetaData cmd = sm.getClassMetaData();
+        if (cmd.getIdentityType() == IdentityType.APPLICATION || 
+            cmd.getIdentityType() == IdentityType.DATASTORE)
         {
-            AbstractClassMetaData acmd = sm.getClassMetaData();
-            HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
-            if (!exists(sm, table))
+            HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(sm.getExecutionContext());
+            try
             {
-                throw new NucleusObjectNotFoundException();
+                AbstractClassMetaData acmd = sm.getClassMetaData();
+                HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
+                if (!exists(sm, table))
+                {
+                    throw new NucleusObjectNotFoundException();
+                }
+                table.close();
             }
-            table.close();
+            catch (IOException e)
+            {
+                throw new NucleusDataStoreException(e.getMessage(), e);
+            }
+            finally
+            {
+                mconn.release();
+            }
         }
-        catch (IOException e)
-        {
-            throw new NucleusDataStoreException(e.getMessage(), e);
-        }
-        finally
-        {
-            mconn.release();
-        }    
     }
 
     private Put newPut(ObjectProvider sm) throws IOException
     {
-        // TODO Support composite PKs
-        // TODO Support datastore id
-        Object pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
+        AbstractClassMetaData cmd = sm.getClassMetaData();
+        Object pkValue = null;
+        if (cmd.getIdentityType() == IdentityType.DATASTORE)
+        {
+            pkValue = ((OID)sm.getInternalObjectId()).getKeyValue();
+        }
+        else if (cmd.getIdentityType() == IdentityType.APPLICATION)
+        {
+            // TODO Support composite PKs
+            pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
+        }
+
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream(bos);
         oos.writeObject(pkValue);
@@ -424,9 +481,18 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
     private Delete newDelete(ObjectProvider sm) throws IOException
     {
-        // TODO Support composite PKs
-        // TODO Support datastore id
-        Object pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
+        AbstractClassMetaData cmd = sm.getClassMetaData();
+        Object pkValue = null;
+        if (cmd.getIdentityType() == IdentityType.DATASTORE)
+        {
+            pkValue = ((OID)sm.getInternalObjectId()).getKeyValue();
+        }
+        else if (cmd.getIdentityType() == IdentityType.APPLICATION)
+        {
+            // TODO Support composite PKs
+            pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
+        }
+
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream(bos);
         oos.writeObject(pkValue);
@@ -438,9 +504,18 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
     private Result getResult(ObjectProvider sm, HTable table) throws IOException
     {
-        // TODO Support composite PKs
-        // TODO Support datastore id
-        Object pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
+        AbstractClassMetaData cmd = sm.getClassMetaData();
+        Object pkValue = null;
+        if (cmd.getIdentityType() == IdentityType.DATASTORE)
+        {
+            pkValue = ((OID)sm.getInternalObjectId()).getKeyValue();
+        }
+        else if (cmd.getIdentityType() == IdentityType.APPLICATION)
+        {
+            // TODO Support composite PKs
+            pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
+        }
+
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream(bos);
         oos.writeObject(pkValue);
@@ -453,9 +528,18 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
     private boolean exists(ObjectProvider sm, HTable table) throws IOException
     {
-        // TODO Support composite PKs
-        // TODO Support datastore id
-        Object pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
+        AbstractClassMetaData cmd = sm.getClassMetaData();
+        Object pkValue = null;
+        if (cmd.getIdentityType() == IdentityType.DATASTORE)
+        {
+            pkValue = ((OID)sm.getInternalObjectId()).getKeyValue();
+        }
+        else if (cmd.getIdentityType() == IdentityType.APPLICATION)
+        {
+            // TODO Support composite PKs
+            pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
+        }
+
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream(bos);
         oos.writeObject(pkValue);

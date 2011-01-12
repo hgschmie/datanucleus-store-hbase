@@ -34,13 +34,14 @@ import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.FetchPlan;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
+import org.datanucleus.identity.IdentityUtils;
+import org.datanucleus.identity.OID;
+import org.datanucleus.identity.OIDFactory;
 import org.datanucleus.metadata.AbstractClassMetaData;
-import org.datanucleus.metadata.VersionStrategy;
+import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.FieldValues2;
 import org.datanucleus.store.ObjectProvider;
-import org.datanucleus.store.Type;
-import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseManagedConnection;
 import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.hbase.fieldmanager.FetchFieldManager;
@@ -57,14 +58,14 @@ class HBaseQueryUtils
      * @param ignoreCache Whether to ignore the cache
      * @return List of objects of the candidate type (or subclass)
      */
-    static List getObjectsOfCandidateType(final ExecutionContext om, final HBaseManagedConnection mconn,
+    static List getObjectsOfCandidateType(final ExecutionContext ec, final HBaseManagedConnection mconn,
             Class candidateClass, boolean subclasses, boolean ignoreCache)
     {
         List results = new ArrayList();
         try
         {
-            final ClassLoaderResolver clr = om.getClassLoaderResolver();
-            final AbstractClassMetaData acmd = om.getMetaDataManager().getMetaDataForClass(candidateClass,clr);
+            final ClassLoaderResolver clr = ec.getClassLoaderResolver();
+            final AbstractClassMetaData acmd = ec.getMetaDataManager().getMetaDataForClass(candidateClass,clr);
 
             Iterator<Result> it = (Iterator<Result>) AccessController.doPrivileged(new PrivilegedExceptionAction()
             {
@@ -73,6 +74,7 @@ class HBaseQueryUtils
                     HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
 
                     Scan scan = new Scan();
+                    // Set up to retrieve all fields, plus optional version and datastore identity columns
                     int[] fieldNumbers =  acmd.getAllMemberPositions();
                     for(int i=0; i<fieldNumbers.length; i++)
                     {
@@ -80,70 +82,99 @@ class HBaseQueryUtils
                         byte[] columnNames = HBaseUtils.getQualifierName(acmd, fieldNumbers[i]).getBytes();
                         scan.addColumn(familyNames,columnNames);
                     }
+                    if (acmd.hasVersionStrategy())
+                    {
+                        byte[] familyNames = HBaseUtils.getFamilyName(acmd.getVersionMetaData()).getBytes();
+                        byte[] columnNames = HBaseUtils.getQualifierName(acmd.getVersionMetaData()).getBytes();
+                        scan.addColumn(familyNames,columnNames);
+                    }
+                    if (acmd.getIdentityType() == IdentityType.DATASTORE)
+                    {
+                        byte[] familyNames = HBaseUtils.getFamilyName(acmd.getIdentityMetaData()).getBytes();
+                        byte[] columnNames = HBaseUtils.getQualifierName(acmd.getIdentityMetaData()).getBytes();
+                        scan.addColumn(familyNames,columnNames);
+                    }
                     ResultScanner scanner = table.getScanner(scan);
                     Iterator<Result> it = scanner.iterator();
                     return it;
                 }
             });
-            
-            while(it.hasNext())
+
+            if (acmd.getIdentityType() == IdentityType.APPLICATION)
             {
-                final Result result = it.next();
-                results.add(om.findObjectUsingAID(new Type(clr.classForName(acmd.getFullClassName())), new FieldValues2()
+                while(it.hasNext())
                 {
-                    // StateManager calls the fetchFields method
-                    public void fetchFields(ObjectProvider sm)
-                    {
-                        FieldManager fm = new FetchFieldManager(acmd, result);
-                        sm.replaceFields(acmd.getDFGMemberPositions(), fm);
-
-                        if (acmd.hasVersionStrategy())
+                    final Result result = it.next();
+                    Object id = IdentityUtils.getApplicationIdentityForResultSetRow(ec, acmd, null, 
+                        false, new FetchFieldManager(acmd, result));
+                    results.add(ec.findObject(id, 
+                        new FieldValues2()
                         {
-                            if (acmd.getVersionMetaData().getFieldName() != null)
+                            // StateManager calls the fetchFields method
+                            public void fetchFields(ObjectProvider sm)
                             {
-                                Object datastoreVersion = sm.provideField(acmd.getAbsolutePositionOfMember(acmd.getVersionMetaData().getFieldName()));
-                                sm.setVersion(datastoreVersion);
+                                sm.replaceFields(acmd.getAllMemberPositions(), new FetchFieldManager(acmd, result));
                             }
-                            else
+                            public void fetchNonLoadedFields(ObjectProvider sm)
                             {
-                                String familyName = HBaseUtils.getFamilyName(acmd.getVersionMetaData());
-                                String columnName = HBaseUtils.getQualifierName(acmd.getVersionMetaData());
-
-                                try
-                                {
-                                    byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-                                    ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-                                    ObjectInputStream ois = new ObjectInputStream(bis);
-                                    if (acmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
-                                    {
-                                        sm.setVersion(Long.valueOf(ois.readLong()));
-                                    }
-                                    else
-                                    {
-                                        sm.setVersion(ois.readObject());
-                                    }
-                                    ois.close();
-                                    bis.close();
-                                }
-                                catch (Exception e)
-                                {
-                                    throw new NucleusException(e.getMessage(), e);
-                                }
+                                sm.replaceNonLoadedFields(acmd.getAllMemberPositions(), new FetchFieldManager(acmd, result));
                             }
+                            public FetchPlan getFetchPlanForLoading()
+                            {
+                                return null;
+                            }
+                        }, null, ignoreCache));
+                }
+            }
+            else if (acmd.getIdentityType() == IdentityType.DATASTORE)
+            {
+                String dsidFamilyName = HBaseUtils.getFamilyName(acmd.getIdentityMetaData());
+                String dsidColumnName = HBaseUtils.getQualifierName(acmd.getIdentityMetaData());
+                while (it.hasNext())
+                {
+                    final Result result = it.next();
+                    OID id = null;
+                    try
+                    {
+                        byte[] bytes = result.getValue(dsidFamilyName.getBytes(), dsidColumnName.getBytes());
+                        if (bytes != null)
+                        {
+                            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                            ObjectInputStream ois = new ObjectInputStream(bis);
+                            Object key = ois.readObject();
+                            id = OIDFactory.getInstance(ec.getNucleusContext(), acmd.getFullClassName(), key);
+                            ois.close();
+                            bis.close();
+                        }
+                        else
+                        {
+                            throw new NucleusException("Retrieved identity for family=" + dsidFamilyName + " column=" + dsidColumnName + " IS NULL");
                         }
                     }
-
-                    public void fetchNonLoadedFields(ObjectProvider sm)
+                    catch (Exception e)
                     {
-                        sm.replaceNonLoadedFields(acmd.getAllMemberPositions(), new FetchFieldManager(acmd, result));
+                        throw new NucleusException(e.getMessage(), e);
                     }
-
-                    public FetchPlan getFetchPlanForLoading()
-                    {
-                        return null;
-                    }
-                }, ignoreCache, true));
-
+                    results.add(ec.findObject(id, 
+                        new FieldValues2()
+                        {
+                            // StateManager calls the fetchFields method
+                            public void fetchFields(ObjectProvider sm)
+                            {
+                                sm.replaceFields(acmd.getAllMemberPositions(), 
+                                    new FetchFieldManager(acmd, result));
+                            }
+                            public void fetchNonLoadedFields(ObjectProvider sm)
+                            {
+                                sm.replaceNonLoadedFields(acmd.getAllMemberPositions(), 
+                                    new FetchFieldManager(acmd, result));
+                            }
+                            public FetchPlan getFetchPlanForLoading()
+                            {
+                                return null;
+                            }
+                        }, null, ignoreCache));
+                }
             }
         }
         catch (PrivilegedActionException e)

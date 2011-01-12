@@ -18,8 +18,6 @@ Contributors:
 package org.datanucleus.store.hbase;
 
 import org.datanucleus.metadata.AbstractClassMetaData;
-import org.datanucleus.metadata.IdentityType;
-import org.datanucleus.metadata.InvalidMetaDataException;
 import org.datanucleus.metadata.MetaDataListener;
 import org.datanucleus.util.Localiser;
 
@@ -34,7 +32,7 @@ public class HBaseMetaDataListener implements MetaDataListener
         "org.datanucleus.store.hbase.Localisation", HBaseStoreManager.class.getClassLoader());
 
     private HBaseStoreManager storeManager;
-    
+
     HBaseMetaDataListener(HBaseStoreManager storeManager)
     {
         this.storeManager = storeManager;
@@ -45,11 +43,11 @@ public class HBaseMetaDataListener implements MetaDataListener
      */
     public void loaded(AbstractClassMetaData cmd)
     {
-        if (cmd.getIdentityType() == IdentityType.DATASTORE && !cmd.isEmbeddedOnly())
+/*        if (cmd.getIdentityType() == IdentityType.DATASTORE && !cmd.isEmbeddedOnly())
         {
             // Datastore id not supported
             throw new InvalidMetaDataException(LOCALISER, "HBase.DatastoreID", cmd.getFullClassName());
-        }
+        }*/
         if (storeManager.isAutoCreateTables() || storeManager.isAutoCreateColumns())
         {
             HBaseUtils.createSchema(storeManager.getHbaseConfig(), cmd, storeManager.isAutoCreateColumns());

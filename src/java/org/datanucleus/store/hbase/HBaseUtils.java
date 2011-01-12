@@ -30,6 +30,7 @@ import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
+import org.datanucleus.metadata.IdentityMetaData;
 import org.datanucleus.metadata.VersionMetaData;
 
 public class HBaseUtils
@@ -46,6 +47,69 @@ public class HBaseUtils
             return acmd.getTable();
         }
         return acmd.getName();
+    }
+
+    /**
+     * Accessor for the HBase family name for the identity of this class. 
+     * Extracts the family name using the following priorities
+     * <ul>
+     * <li>If column is specified as "a:b" then takes "a" as the family name.</li>
+     * <li>Otherwise takes table name as the family name</li>
+     * </ul>
+     * @param idmd Metadata for the identity
+     * @return The family name
+     */
+    public static String getFamilyName(IdentityMetaData idmd)
+    {
+        String columnName = null;
+
+        // Try from the column name if specified as "a:b"
+        ColumnMetaData[] colmds = idmd.getColumnMetaData();
+        if (colmds != null && colmds.length > 0)
+        {
+            columnName = colmds[0].getName();
+            if (columnName!= null && columnName.indexOf(":")>-1)
+            {
+                return columnName.substring(0,columnName.indexOf(":"));
+            }
+        }
+
+        // Fallback to table name.
+        return getTableName((AbstractClassMetaData)idmd.getParent());
+    }
+
+    /**
+     * Accessor for the HBase qualifier name for this identity. 
+     * Extracts the qualifier name using the following priorities
+     * <ul>
+     * <li>If column is specified as "a:b" then takes "b" as the qualifier name.</li>
+     * <li>Otherwise takes the column name as the qualifier name when it is specified</li>
+     * <li>Otherwise takes "VERSION" as the qualifier name</li>
+     * </ul>
+     * @param idmd Metadata for the Identity
+     * @param absoluteFieldNumber Field number
+     * @return The qualifier name
+     */
+    public static String getQualifierName(IdentityMetaData idmd)
+    {
+        String columnName = null;
+
+        // Try the first column if specified
+        ColumnMetaData[] colmds = idmd.getColumnMetaData();
+        if (colmds != null && colmds.length > 0)
+        {
+            columnName = colmds[0].getName();
+        }
+        if (columnName == null)
+        {
+            // Fallback to "IDENTITY"
+            columnName = "IDENTITY";
+        }
+        if (columnName.indexOf(":")>-1)
+        {
+            columnName = columnName.substring(columnName.indexOf(":")+1);
+        }
+        return columnName;
     }
 
     /**
