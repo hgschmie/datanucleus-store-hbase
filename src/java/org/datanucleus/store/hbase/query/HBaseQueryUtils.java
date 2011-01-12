@@ -91,8 +91,7 @@ class HBaseQueryUtils
                     public void fetchFields(ObjectProvider sm)
                     {
                         FieldManager fm = new FetchFieldManager(acmd, result);
-                        sm.replaceFields(acmd.getPKMemberPositions(), fm);
-                        sm.replaceFields(acmd.getBasicMemberPositions(clr, om.getMetaDataManager()), fm);
+                        sm.replaceFields(acmd.getDFGMemberPositions(), fm);
                     }
 
                     public void fetchNonLoadedFields(ObjectProvider sm)
