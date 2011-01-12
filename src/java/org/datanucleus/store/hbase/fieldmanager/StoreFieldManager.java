@@ -61,7 +61,6 @@ public class StoreFieldManager extends AbstractFieldManager
     {
         String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
         String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
-
         try
         {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -89,15 +88,24 @@ public class StoreFieldManager extends AbstractFieldManager
     {
         String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
         String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        AbstractMemberMetaData mmd = 
+            acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
         try
         {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(bos);
-            oos.writeChar(value);
-            oos.flush();
-            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-            oos.close();
-            bos.close();
+            if (mmd.isSerialized())
+            {
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                ObjectOutputStream oos = new ObjectOutputStream(bos);
+                oos.writeChar(value);
+                oos.flush();
+                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                oos.close();
+                bos.close();
+            }
+            else
+            {
+                put.add(familyName.getBytes(), columnName.getBytes(), ("" + value).getBytes());
+            }
         }
         catch (IOException e)
         {
@@ -199,7 +207,7 @@ public class StoreFieldManager extends AbstractFieldManager
             ExecutionContext ec = sm.getExecutionContext();
             ClassLoaderResolver clr = ec.getClassLoaderResolver();
             AbstractMemberMetaData mmd = 
-                sm.getClassMetaData().getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
+                acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
             int relationType = mmd.getRelationType(clr);
             if (relationType == Relation.ONE_TO_ONE_BI || relationType == Relation.ONE_TO_ONE_UNI ||
                 relationType == Relation.MANY_TO_ONE_BI || relationType == Relation.MANY_TO_ONE_UNI)
@@ -227,7 +235,7 @@ public class StoreFieldManager extends AbstractFieldManager
                 else
                 {
                     // Persist identity in the column of this object
-                    Object valueId = sm.getExecutionContext().getApiAdapter().getIdForObject(valuePC);
+                    Object valueId = ec.getApiAdapter().getIdForObject(valuePC);
                     try
                     {
                         ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -306,11 +314,11 @@ public class StoreFieldManager extends AbstractFieldManager
                         Object mapValue = entry.getValue();
                         if (ec.getApiAdapter().isPersistable(mapKey))
                         {
-                            sm.getExecutionContext().persistObjectInternal(mapKey, sm, fieldNumber, -1);
+                            ec.persistObjectInternal(mapKey, sm, fieldNumber, -1);
                         }
                         if (ec.getApiAdapter().isPersistable(mapValue))
                         {
-                            sm.getExecutionContext().persistObjectInternal(mapValue, sm, fieldNumber, -1);
+                            ec.persistObjectInternal(mapValue, sm, fieldNumber, -1);
                         }
                     }
                     if (mmd.isSerialized())
@@ -342,8 +350,8 @@ public class StoreFieldManager extends AbstractFieldManager
                     for (int i=0;i<Array.getLength(value);i++)
                     {
                         Object element = Array.get(value, i);
-                        Object elementPC = sm.getExecutionContext().persistObjectInternal(element, sm, fieldNumber, -1);
-                        Object elementID = sm.getExecutionContext().getApiAdapter().getIdForObject(elementPC);
+                        Object elementPC = ec.persistObjectInternal(element, sm, fieldNumber, -1);
+                        Object elementID = ec.getApiAdapter().getIdForObject(elementPC);
                         arrIds.add(elementID);
                     }
 
@@ -433,14 +441,23 @@ public class StoreFieldManager extends AbstractFieldManager
         }
         else
         {
+            AbstractMemberMetaData mmd = 
+                acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
             try
             {
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                ObjectOutputStream oos = new ObjectOutputStream(bos);
-                oos.writeObject(value);
-                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                oos.close();
-                bos.close();
+                if (mmd.isSerialized())
+                {
+                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                    ObjectOutputStream oos = new ObjectOutputStream(bos);
+                    oos.writeObject(value);
+                    put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                    oos.close();
+                    bos.close();
+                }
+                else
+                {
+                    put.add(familyName.getBytes(), columnName.getBytes(), value.getBytes());
+                }
             }
             catch (IOException e)
             {

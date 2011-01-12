@@ -37,31 +37,31 @@ public class JDOQLQuery extends AbstractJDOQLQuery
 {
     /**
      * Constructs a new query instance that uses the given persistence manager.
-     * @param om the associated ObjectManager for this query.
+     * @param ec Execution Context
      */
-    public JDOQLQuery(ExecutionContext om)
+    public JDOQLQuery(ExecutionContext ec)
     {
-        this(om, (JDOQLQuery) null);
+        this(ec, (JDOQLQuery) null);
     }
 
     /**
      * Constructs a new query instance having the same criteria as the given query.
-     * @param om The ObjectManager
+     * @param ec Execution Context
      * @param q The query from which to copy criteria.
      */
-    public JDOQLQuery(ExecutionContext om, JDOQLQuery q)
+    public JDOQLQuery(ExecutionContext ec, JDOQLQuery q)
     {
-        super(om, q);
+        super(ec, q);
     }
 
     /**
      * Constructor for a JDOQL query where the query is specified using the "Single-String" format.
-     * @param om The persistence manager
+     * @param ec Execution Context
      * @param query The query string
      */
-    public JDOQLQuery(ExecutionContext om, String query)
+    public JDOQLQuery(ExecutionContext ec, String query)
     {
-        super(om, query);
+        super(ec, query);
     }
 
     protected Object performExecute(Map parameters)

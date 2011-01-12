@@ -32,7 +32,6 @@ import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
-import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.Relation;
 import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.ObjectProvider;
@@ -88,36 +87,32 @@ public class FetchFieldManager extends AbstractFieldManager
     {
         String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
         String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
-        byte value;
-        try
-        {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-            ObjectInputStream ois = new ObjectInputStream(bis);
-            value = ois.readByte();
-            ois.close();
-            bis.close();
-        }
-        catch (IOException e)
-        {
-            throw new NucleusException(e.getMessage(), e);
-        }
-        return value;
+        byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+        return bytes[0];
     }
 
     public char fetchCharField(int fieldNumber)
     {
         String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
         String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        AbstractMemberMetaData mmd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
         char value;
         try
         {
             byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-            ObjectInputStream ois = new ObjectInputStream(bis);
-            value = ois.readChar();
-            ois.close();
-            bis.close();
+            if (mmd.isSerialized())
+            {
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                value = ois.readChar();
+                ois.close();
+                bis.close();
+            }
+            else
+            {
+                String strValue = new String(bytes);
+                value = strValue.charAt(0);
+            }
         }
         catch (IOException e)
         {
@@ -244,7 +239,7 @@ public class FetchFieldManager extends AbstractFieldManager
         AbstractMemberMetaData mmd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
         int relationType = mmd.getRelationType(clr);
         if (relationType == Relation.ONE_TO_ONE_BI || relationType == Relation.ONE_TO_ONE_UNI ||
-            relationType == Relation.MANY_TO_ONE_BI || relationType == Relation.MANY_TO_ONE_UNI)
+                relationType == Relation.MANY_TO_ONE_BI || relationType == Relation.MANY_TO_ONE_UNI)
         {
             if (mmd.isSerialized())
             {
@@ -257,8 +252,9 @@ public class FetchFieldManager extends AbstractFieldManager
             }
         }
         else if (relationType == Relation.ONE_TO_MANY_UNI || relationType == Relation.ONE_TO_MANY_BI ||
-            relationType == Relation.MANY_TO_MANY_BI)
+                relationType == Relation.MANY_TO_MANY_BI)
         {
+            // TODO Replace with SCO
             if (mmd.hasCollection())
             {
                 if (mmd.isSerialized())
@@ -312,6 +308,7 @@ public class FetchFieldManager extends AbstractFieldManager
                 return array;
             }
         }
+        // TODO Replace with SCO
         return value;
     }
 
@@ -340,17 +337,25 @@ public class FetchFieldManager extends AbstractFieldManager
     {
         String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
         String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        AbstractMemberMetaData mmd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
         String value;
         try
         {
             byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
             if (bytes != null)
             {
-                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-                ObjectInputStream ois = new ObjectInputStream(bis);
-                value = (String) ois.readObject();
-                ois.close();
-                bis.close();
+                if (mmd.isSerialized())
+                {
+                    ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                    ObjectInputStream ois = new ObjectInputStream(bis);
+                    value = (String) ois.readObject();
+                    ois.close();
+                    bis.close();
+                }
+                else
+                {
+                    value = new String(bytes);
+                }
             }
             else
             {
@@ -366,36 +371,5 @@ public class FetchFieldManager extends AbstractFieldManager
             throw new NucleusException(e.getMessage(), e);
         }
         return value;
-    }
-
-    /**
-     * Convenience method to find an object given a string form of its identity, and the metadata for the
-     * class (or a superclass).
-     * @param idStr The id string
-     * @param cmd Metadata for the class
-     * @return The object
-     */
-    protected Object getObjectFromIdString(String idStr, AbstractClassMetaData cmd)
-    {
-        ClassLoaderResolver clr = ec.getClassLoaderResolver();
-        Object id = null;
-        if (cmd.getIdentityType() == IdentityType.DATASTORE)
-        {
-            
-        }
-        else if (cmd.getIdentityType() == IdentityType.APPLICATION)
-        {
-            if (cmd.usesSingleFieldIdentityClass())
-            {
-                id = ec.getApiAdapter().getNewApplicationIdentityObjectId(clr, cmd, idStr);
-            }
-            else
-            {
-                Class cls = clr.classForName(cmd.getFullClassName());
-                id = ec.newObjectId(cls, idStr);
-            }
-            return ec.findObject(id, true, true, null);
-        }
-        return null;
     }
 }

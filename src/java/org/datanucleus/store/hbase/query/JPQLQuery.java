@@ -38,31 +38,31 @@ public class JPQLQuery extends AbstractJPQLQuery
 {
     /**
      * Constructs a new query instance that uses the given persistence manager.
-     * @param om the associated ObjectManager for this query.
+     * @param ec Execution Context
      */
-    public JPQLQuery(ExecutionContext om)
+    public JPQLQuery(ExecutionContext ec)
     {
-        this(om, (JPQLQuery) null);
+        this(ec, (JPQLQuery) null);
     }
 
     /**
      * Constructs a new query instance having the same criteria as the given query.
-     * @param om The ObjectManager
+     * @param ec Execution Context
      * @param q The query from which to copy criteria.
      */
-    public JPQLQuery(ExecutionContext om, JPQLQuery q)
+    public JPQLQuery(ExecutionContext ec, JPQLQuery q)
     {
-        super(om, q);
+        super(ec, q);
     }
 
     /**
      * Constructor for a JPQL query where the query is specified using the "Single-String" format.
-     * @param om The persistence manager
+     * @param ec Execution Context
      * @param query The query string
      */
-    public JPQLQuery(ExecutionContext om, String query)
+    public JPQLQuery(ExecutionContext ec, String query)
     {
-        super(om, query);
+        super(ec, query);
     }
 
     protected Object performExecute(Map parameters)

@@ -50,8 +50,8 @@ class HBaseQueryUtils
 {
     /**
      * Convenience method to get all objects of the candidate type (and optional subclasses) from the 
-     * specified XML connection.
-     * @param om ObjectManager
+     * specified connection.
+     * @param ec Execution Context
      * @param mconn Managed Connection
      * @param candidateClass Candidate
      * @param subclasses Include subclasses?
