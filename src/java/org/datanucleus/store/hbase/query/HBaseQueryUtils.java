@@ -106,18 +106,18 @@ class HBaseQueryUtils
                 {
                     final Result result = it.next();
                     Object id = IdentityUtils.getApplicationIdentityForResultSetRow(ec, acmd, null, 
-                        false, new FetchFieldManager(acmd, result));
+                        false, new FetchFieldManager(ec, acmd, result));
                     results.add(ec.findObject(id, 
                         new FieldValues2()
                         {
                             // StateManager calls the fetchFields method
                             public void fetchFields(ObjectProvider sm)
                             {
-                                sm.replaceFields(acmd.getAllMemberPositions(), new FetchFieldManager(acmd, result));
+                                sm.replaceFields(acmd.getAllMemberPositions(), new FetchFieldManager(ec, acmd, result));
                             }
                             public void fetchNonLoadedFields(ObjectProvider sm)
                             {
-                                sm.replaceNonLoadedFields(acmd.getAllMemberPositions(), new FetchFieldManager(acmd, result));
+                                sm.replaceNonLoadedFields(acmd.getAllMemberPositions(), new FetchFieldManager(ec, acmd, result));
                             }
                             public FetchPlan getFetchPlanForLoading()
                             {
@@ -162,12 +162,12 @@ class HBaseQueryUtils
                             public void fetchFields(ObjectProvider sm)
                             {
                                 sm.replaceFields(acmd.getAllMemberPositions(), 
-                                    new FetchFieldManager(acmd, result));
+                                    new FetchFieldManager(ec, acmd, result));
                             }
                             public void fetchNonLoadedFields(ObjectProvider sm)
                             {
                                 sm.replaceNonLoadedFields(acmd.getAllMemberPositions(), 
-                                    new FetchFieldManager(acmd, result));
+                                    new FetchFieldManager(ec, acmd, result));
                             }
                             public FetchPlan getFetchPlanForLoading()
                             {

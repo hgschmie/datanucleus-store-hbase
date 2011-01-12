@@ -45,7 +45,7 @@ import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.ObjectProvider;
 import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.hbase.fieldmanager.FetchFieldManager;
-import org.datanucleus.store.hbase.fieldmanager.InsertFieldManager;
+import org.datanucleus.store.hbase.fieldmanager.StoreFieldManager;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
 
@@ -206,7 +206,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 }
             }
 
-            InsertFieldManager fm = new InsertFieldManager(acmd, put, delete);
+            StoreFieldManager fm = new StoreFieldManager(sm, put, delete);
             sm.provideFields(acmd.getAllMemberPositions(), fm);
 
             table.put(put);
@@ -244,7 +244,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
             Put put = newPut(sm);
             Delete delete = newDelete(sm); // we will ignore the delete object
-            InsertFieldManager fm = new InsertFieldManager(acmd, put, delete);
+            StoreFieldManager fm = new StoreFieldManager(sm, put, delete);
             sm.provideFields(fieldNumbers, fm);
 
             if (acmd.hasVersionStrategy())
@@ -366,11 +366,11 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             AbstractClassMetaData acmd = sm.getClassMetaData();
             HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
             Result result = getResult(sm, table);
-            if (result.getRow()==null)
+            if (result.getRow() == null)
             {
                 throw new NucleusObjectNotFoundException();
             }
-            FetchFieldManager fm = new FetchFieldManager(acmd, result);
+            FetchFieldManager fm = new FetchFieldManager(sm, result);
             sm.replaceFields(acmd.getAllMemberPositions(), fm);
 
             if (acmd.hasVersionStrategy() && sm.getTransactionalVersion() == null)

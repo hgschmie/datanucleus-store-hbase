@@ -14,6 +14,7 @@ limitations under the License.
 
 Contributors :
 2011 Andy Jefferson - clean up of NPE code
+2011 Andy Jefferson - rewritten to support relationships
     ...
 ***********************************************************************/
 package org.datanucleus.store.hbase.fieldmanager;
@@ -21,21 +22,44 @@ package org.datanucleus.store.hbase.fieldmanager;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.lang.reflect.Array;
+import java.util.Collection;
+import java.util.Iterator;
 
 import org.apache.hadoop.hbase.client.Result;
+import org.datanucleus.ClassLoaderResolver;
+import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.metadata.AbstractClassMetaData;
+import org.datanucleus.metadata.AbstractMemberMetaData;
+import org.datanucleus.metadata.IdentityType;
+import org.datanucleus.metadata.Relation;
+import org.datanucleus.store.ExecutionContext;
+import org.datanucleus.store.ObjectProvider;
 import org.datanucleus.store.fieldmanager.AbstractFieldManager;
 import org.datanucleus.store.hbase.HBaseUtils;
+import org.datanucleus.store.types.sco.SCOUtils;
 
 public class FetchFieldManager extends AbstractFieldManager
 {
     Result result;
+
+    ExecutionContext ec;
+    ObjectProvider sm;
     AbstractClassMetaData acmd;
 
-    public FetchFieldManager(AbstractClassMetaData acmd, Result result)
+    public FetchFieldManager(ExecutionContext ec, AbstractClassMetaData acmd, Result result)
     {
+        this.ec = ec;
         this.acmd = acmd;
+        this.result = result;
+    }
+
+    public FetchFieldManager(ObjectProvider sm, Result result)
+    {
+        this.ec = sm.getExecutionContext();
+        this.sm = sm;
+        this.acmd = sm.getClassMetaData();
         this.result = result;
     }
 
@@ -215,6 +239,79 @@ public class FetchFieldManager extends AbstractFieldManager
         {
             throw new NucleusException(e.getMessage(), e);
         }
+
+        ClassLoaderResolver clr = ec.getClassLoaderResolver();
+        AbstractMemberMetaData mmd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
+        int relationType = mmd.getRelationType(clr);
+        if (relationType == Relation.ONE_TO_ONE_BI || relationType == Relation.ONE_TO_ONE_UNI ||
+            relationType == Relation.MANY_TO_ONE_BI || relationType == Relation.MANY_TO_ONE_UNI)
+        {
+            if (mmd.isSerialized())
+            {
+                return value;
+            }
+            else
+            {
+                // The stored value was the identity
+                return ec.findObject(value, true, true, null);
+            }
+        }
+        else if (relationType == Relation.ONE_TO_MANY_UNI || relationType == Relation.ONE_TO_MANY_BI ||
+            relationType == Relation.MANY_TO_MANY_BI)
+        {
+            if (mmd.hasCollection())
+            {
+                if (mmd.isSerialized())
+                {
+                    return value;
+                }
+
+                Collection<Object> coll;
+                try
+                {
+                    Class instanceType = SCOUtils.getContainerInstanceType(mmd.getType(), mmd.getOrderMetaData() != null);
+                    coll = (Collection<Object>) instanceType.newInstance();
+                }
+                catch (Exception e)
+                {
+                    throw new NucleusDataStoreException(e.getMessage(), e);
+                }
+
+                Collection collIds = (Collection)value;
+                Iterator idIter = collIds.iterator();
+                while (idIter.hasNext())
+                {
+                    Object elementId = idIter.next();
+                    coll.add(ec.findObject(elementId, true, true, null));
+                }
+                return coll;
+            }
+            else if (mmd.hasMap())
+            {
+                if (mmd.isSerialized())
+                {
+                    return value;
+                }
+            }
+            else if (mmd.hasArray())
+            {
+                if (mmd.isSerialized())
+                {
+                    return value;
+                }
+
+                Collection arrIds = (Collection)value;
+                Object array = Array.newInstance(mmd.getType().getComponentType(), arrIds.size());
+                Iterator idIter = arrIds.iterator();
+                int i=0;
+                while (idIter.hasNext())
+                {
+                    Object elementId = idIter.next();
+                    Array.set(array, i, ec.findObject(elementId, true, true, null));
+                }
+                return array;
+            }
+        }
         return value;
     }
 
@@ -269,5 +366,36 @@ public class FetchFieldManager extends AbstractFieldManager
             throw new NucleusException(e.getMessage(), e);
         }
         return value;
+    }
+
+    /**
+     * Convenience method to find an object given a string form of its identity, and the metadata for the
+     * class (or a superclass).
+     * @param idStr The id string
+     * @param cmd Metadata for the class
+     * @return The object
+     */
+    protected Object getObjectFromIdString(String idStr, AbstractClassMetaData cmd)
+    {
+        ClassLoaderResolver clr = ec.getClassLoaderResolver();
+        Object id = null;
+        if (cmd.getIdentityType() == IdentityType.DATASTORE)
+        {
+            
+        }
+        else if (cmd.getIdentityType() == IdentityType.APPLICATION)
+        {
+            if (cmd.usesSingleFieldIdentityClass())
+            {
+                id = ec.getApiAdapter().getNewApplicationIdentityObjectId(clr, cmd, idStr);
+            }
+            else
+            {
+                Class cls = clr.classForName(cmd.getFullClassName());
+                id = ec.newObjectId(cls, idStr);
+            }
+            return ec.findObject(id, true, true, null);
+        }
+        return null;
     }
 }
