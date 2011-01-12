@@ -17,6 +17,8 @@ Contributors :
 ***********************************************************************/
 package org.datanucleus.store.hbase.query;
 
+import java.io.ByteArrayInputStream;
+import java.io.ObjectInputStream;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
@@ -31,7 +33,9 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.FetchPlan;
 import org.datanucleus.exceptions.NucleusDataStoreException;
+import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.metadata.AbstractClassMetaData;
+import org.datanucleus.metadata.VersionStrategy;
 import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.FieldValues2;
 import org.datanucleus.store.ObjectProvider;
@@ -92,6 +96,41 @@ class HBaseQueryUtils
                     {
                         FieldManager fm = new FetchFieldManager(acmd, result);
                         sm.replaceFields(acmd.getDFGMemberPositions(), fm);
+
+                        if (acmd.hasVersionStrategy())
+                        {
+                            if (acmd.getVersionMetaData().getFieldName() != null)
+                            {
+                                Object datastoreVersion = sm.provideField(acmd.getAbsolutePositionOfMember(acmd.getVersionMetaData().getFieldName()));
+                                sm.setVersion(datastoreVersion);
+                            }
+                            else
+                            {
+                                String familyName = HBaseUtils.getFamilyName(acmd.getVersionMetaData());
+                                String columnName = HBaseUtils.getQualifierName(acmd.getVersionMetaData());
+
+                                try
+                                {
+                                    byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+                                    ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                                    ObjectInputStream ois = new ObjectInputStream(bis);
+                                    if (acmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
+                                    {
+                                        sm.setVersion(Long.valueOf(ois.readLong()));
+                                    }
+                                    else
+                                    {
+                                        sm.setVersion(ois.readObject());
+                                    }
+                                    ois.close();
+                                    bis.close();
+                                }
+                                catch (Exception e)
+                                {
+                                    throw new NucleusException(e.getMessage(), e);
+                                }
+                            }
+                        }
                     }
 
                     public void fetchNonLoadedFields(ObjectProvider sm)

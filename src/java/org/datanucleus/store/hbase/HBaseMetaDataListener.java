@@ -54,6 +54,5 @@ public class HBaseMetaDataListener implements MetaDataListener
         {
             HBaseUtils.createSchema(storeManager.getHbaseConfig(), cmd, storeManager.isAutoCreateColumns());
         }
-        
     }
 }

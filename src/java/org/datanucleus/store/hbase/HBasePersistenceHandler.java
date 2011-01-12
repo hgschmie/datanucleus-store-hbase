@@ -17,9 +17,13 @@ Contributors :
 ***********************************************************************/
 package org.datanucleus.store.hbase;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.sql.Timestamp;
+import java.util.Date;
 
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -27,9 +31,13 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.datanucleus.exceptions.NucleusDataStoreException;
+import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusObjectNotFoundException;
 import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
+import org.datanucleus.metadata.AbstractMemberMetaData;
+import org.datanucleus.metadata.VersionMetaData;
+import org.datanucleus.metadata.VersionStrategy;
 import org.datanucleus.store.AbstractPersistenceHandler;
 import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.ObjectProvider;
@@ -37,6 +45,7 @@ import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.hbase.fieldmanager.FetchFieldManager;
 import org.datanucleus.store.hbase.fieldmanager.InsertFieldManager;
 import org.datanucleus.util.Localiser;
+import org.datanucleus.util.NucleusLogger;
 
 /**
  * Persistence handler for HBase, providing insert, update, delete, and find handling.
@@ -87,8 +96,86 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
             Put put = newPut(sm);
             Delete delete = newDelete(sm);
+            if (acmd.hasVersionStrategy())
+            {
+                String familyName = HBaseUtils.getFamilyName(acmd.getVersionMetaData());
+                String columnName = HBaseUtils.getQualifierName(acmd.getVersionMetaData());
+                if (acmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
+                {
+                    long versionNumber = 1;
+                    sm.setTransactionalVersion(Long.valueOf(versionNumber));
+                    if (NucleusLogger.DATASTORE.isDebugEnabled())
+                    {
+                        NucleusLogger.DATASTORE.debug(LOCALISER.msg("HBase.Insert.ObjectPersistedWithVersion",
+                            sm.toPrintableID(), sm.getInternalObjectId(), "" + versionNumber));
+                    }
+                    if (acmd.getVersionMetaData().getFieldName() != null)
+                    {
+                        AbstractMemberMetaData verMmd = acmd.getMetaDataForMember(acmd.getVersionMetaData().getFieldName());
+                        Object verFieldValue = Long.valueOf(versionNumber);
+                        if (verMmd.getType() == int.class || verMmd.getType() == Integer.class)
+                        {
+                            verFieldValue = Integer.valueOf((int)versionNumber);
+                        }
+                        sm.replaceField(verMmd.getAbsoluteFieldNumber(), verFieldValue);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            NucleusLogger.GENERAL.info(">> insertObject setting VERSION");
+                            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                            ObjectOutputStream oos = new ObjectOutputStream(bos);
+                            oos.writeLong(versionNumber);
+                            oos.flush();
+                            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                            oos.close();
+                            bos.close();
+                        }
+                        catch (IOException e)
+                        {
+                            throw new NucleusException(e.getMessage(), e);
+                        }
+                    }
+                }
+                else if (acmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.DATE_TIME)
+                {
+                    Date date = new Date();
+                    Timestamp ts = new Timestamp(date.getTime());
+                    sm.setTransactionalVersion(ts);
+                    if (NucleusLogger.DATASTORE.isDebugEnabled())
+                    {
+                        NucleusLogger.DATASTORE.debug(LOCALISER.msg("HBase.Insert.ObjectPersistedWithVersion",
+                            sm.toPrintableID(), sm.getInternalObjectId(), "" + ts));
+                    }
+                    if (acmd.getVersionMetaData().getFieldName() != null)
+                    {
+                        AbstractMemberMetaData verMmd = acmd.getMetaDataForMember(acmd.getVersionMetaData().getFieldName());
+                        sm.replaceField(verMmd.getAbsoluteFieldNumber(), ts);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            NucleusLogger.GENERAL.info(">> insertObject setting VERSION");
+                            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                            ObjectOutputStream oos = new ObjectOutputStream(bos);
+                            oos.writeObject(ts);
+                            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                            oos.close();
+                            bos.close();
+                        }
+                        catch (IOException e)
+                        {
+                            throw new NucleusException(e.getMessage(), e);
+                        }
+                    }
+                }
+            }
+
             InsertFieldManager fm = new InsertFieldManager(acmd, put, delete);
             sm.provideFields(acmd.getAllMemberPositions(), fm);
+
             table.put(put);
             table.close();
         }
@@ -116,6 +203,73 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             Delete delete = newDelete(sm); // we will ignore the delete object
             InsertFieldManager fm = new InsertFieldManager(acmd, put, delete);
             sm.provideFields(fieldNumbers, fm);
+
+            if (acmd.hasVersionStrategy())
+            {
+                // Version object so calculate version to store with
+                Object currentVersion = sm.getTransactionalVersion();
+                Object nextVersion = null;
+                VersionMetaData vermd = acmd.getVersionMetaData();
+                if (acmd.getVersionMetaData().getFieldName() != null)
+                {
+                    // Version field
+                    AbstractMemberMetaData verfmd = acmd.getMetaDataForMember(vermd.getFieldName());
+                    if (currentVersion instanceof Integer)
+                    {
+                        // Cater for Integer-based versions TODO Generalise this
+                        currentVersion = Long.valueOf(((Integer)currentVersion).longValue());
+                    }
+
+                    nextVersion = acmd.getVersionMetaData().getNextVersion(currentVersion);
+                    if (verfmd.getType() == Integer.class || verfmd.getType() == int.class)
+                    {
+                        // Cater for Integer-based versions TODO Generalise this
+                        nextVersion = Integer.valueOf(((Long)nextVersion).intValue());
+                    }
+                }
+                else
+                {
+                    // Surrogate version column
+                    nextVersion = vermd.getNextVersion(currentVersion);
+                }
+
+                String familyName = HBaseUtils.getFamilyName(acmd.getVersionMetaData());
+                String columnName = HBaseUtils.getQualifierName(acmd.getVersionMetaData());
+                if (acmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
+                {
+                    try
+                    {
+                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                        ObjectOutputStream oos = new ObjectOutputStream(bos);
+                        oos.writeLong(((Long)nextVersion).longValue());
+                        oos.flush();
+                        put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                        oos.close();
+                        bos.close();
+                    }
+                    catch (IOException e)
+                    {
+                        throw new NucleusException(e.getMessage(), e);
+                    }
+                }
+                else if (acmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.DATE_TIME)
+                {
+                    try
+                    {
+                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                        ObjectOutputStream oos = new ObjectOutputStream(bos);
+                        oos.writeObject(nextVersion);
+                        put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                        oos.close();
+                        bos.close();
+                    }
+                    catch (IOException e)
+                    {
+                        throw new NucleusException(e.getMessage(), e);
+                    }
+                }
+            }
+
             if (!put.isEmpty())
             {
                 table.put(put);
@@ -169,12 +323,51 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             AbstractClassMetaData acmd = sm.getClassMetaData();
             HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
             Result result = getResult(sm, table);
-            if(result.getRow()==null)
+            if (result.getRow()==null)
             {
                 throw new NucleusObjectNotFoundException();
             }
             FetchFieldManager fm = new FetchFieldManager(acmd, result);
             sm.replaceFields(acmd.getAllMemberPositions(), fm);
+
+            if (acmd.hasVersionStrategy() && sm.getTransactionalVersion() == null)
+            {
+                // No version set, so retrieve it
+                if (acmd.getVersionMetaData().getFieldName() != null)
+                {
+                    // Version stored in a field
+                    Object datastoreVersion =
+                        sm.provideField(acmd.getAbsolutePositionOfMember(acmd.getVersionMetaData().getFieldName()));
+                    sm.setVersion(datastoreVersion);
+                }
+                else
+                {
+                    // Surrogate version
+                    String familyName = HBaseUtils.getFamilyName(acmd.getVersionMetaData());
+                    String columnName = HBaseUtils.getQualifierName(acmd.getVersionMetaData());
+                    try
+                    {
+                        byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+                        ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                        ObjectInputStream ois = new ObjectInputStream(bis);
+                        if (acmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
+                        {
+                            sm.setVersion(Long.valueOf(ois.readLong()));
+                        }
+                        else
+                        {
+                            sm.setVersion(ois.readObject());
+                        }
+                        ois.close();
+                        bis.close();
+                    }
+                    catch (Exception e)
+                    {
+                        throw new NucleusException(e.getMessage(), e);
+                    }
+                }
+            }
+
             table.close();
         }
         catch (IOException e)

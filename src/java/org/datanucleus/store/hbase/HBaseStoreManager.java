@@ -46,6 +46,7 @@ public class HBaseStoreManager extends AbstractStoreManager
      * Constructor.
      * @param clr ClassLoader resolver
      * @param ctx context
+     * @param props Properties for the datastore
      */
     public HBaseStoreManager(ClassLoaderResolver clr, NucleusContext ctx, Map<String, Object> props)
     {
