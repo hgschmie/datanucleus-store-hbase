@@ -67,7 +67,7 @@ public class HBaseUtils
         if (colmds != null && colmds.length > 0)
         {
             columnName = colmds[0].getName();
-            if (columnName.indexOf(":")>-1)
+            if (columnName!= null && columnName.indexOf(":")>-1)
             {
                 return columnName.substring(0,columnName.indexOf(":"));
             }
@@ -131,7 +131,7 @@ public class HBaseUtils
         if (colmds != null && colmds.length > 0)
         {
             columnName = colmds[0].getName();
-            if (columnName.indexOf(":")>-1)
+            if (columnName != null && columnName.indexOf(":")>-1)
             {
                 return columnName.substring(0,columnName.indexOf(":"));
             }
