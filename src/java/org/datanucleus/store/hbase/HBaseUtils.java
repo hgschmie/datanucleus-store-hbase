@@ -53,7 +53,6 @@ public class HBaseUtils
      * Extracts the family name using the following priorities
      * <ul>
      * <li>If column is specified as "a:b" then takes "a" as the family name.</li>
-     * <li>Otherwise takes the column name as the family name when it is specified</li>
      * <li>Otherwise takes table name as the family name</li>
      * </ul>
      * @param vermd Metadata for the version
@@ -63,22 +62,19 @@ public class HBaseUtils
     {
         String columnName = null;
 
-        // Try the first column if specified
+        // Try from the column name if specified as "a:b"
         ColumnMetaData[] colmds = vermd.getColumnMetaData();
         if (colmds != null && colmds.length > 0)
         {
             columnName = colmds[0].getName();
+            if (columnName.indexOf(":")>-1)
+            {
+                return columnName.substring(0,columnName.indexOf(":"));
+            }
         }
-        if (columnName == null)
-        {
-            // Fallback to table name.
-            columnName = getTableName((AbstractClassMetaData)vermd.getParent());
-        }
-        else if (columnName.indexOf(":")>-1)
-        {
-            columnName = columnName.substring(0,columnName.indexOf(":"));
-        }
-        return columnName;
+
+        // Fallback to table name.
+        return getTableName((AbstractClassMetaData)vermd.getParent());
     }
 
     /**
@@ -119,7 +115,6 @@ public class HBaseUtils
      * Accessor for the HBase family name for this field. Extracts the family name using the following priorities
      * <ul>
      * <li>If column is specified as "a:b" then takes "a" as the family name.</li>
-     * <li>Otherwise takes the column name as the family name when it is specified</li>
      * <li>Otherwise takes the table name as the family name</li>
      * </ul>
      * @param acmd Metadata for the class
@@ -136,17 +131,14 @@ public class HBaseUtils
         if (colmds != null && colmds.length > 0)
         {
             columnName = colmds[0].getName();
+            if (columnName.indexOf(":")>-1)
+            {
+                return columnName.substring(0,columnName.indexOf(":"));
+            }
         }
-        if (columnName == null)
-        {
-            // Fallback to the field/property name
-            columnName = HBaseUtils.getTableName(acmd);
-        }
-        else if (columnName.indexOf(":")>-1)
-        {
-            columnName = columnName.substring(0,columnName.indexOf(":"));
-        }
-        return columnName;
+
+        // Fallback to the table name
+        return HBaseUtils.getTableName(acmd);
     }
 
     /**
