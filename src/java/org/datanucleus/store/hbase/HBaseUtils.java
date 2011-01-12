@@ -30,9 +30,15 @@ import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
+import org.datanucleus.metadata.VersionMetaData;
 
 public class HBaseUtils
 {
+    /**
+     * Accessor for the HBase table name for this class.
+     * @param acmd Metadata for the class
+     * @return The table name
+     */
     public static String getTableName(AbstractClassMetaData acmd)
     {
         if (acmd.getTable() != null)
@@ -42,6 +48,84 @@ public class HBaseUtils
         return acmd.getName();
     }
 
+    /**
+     * Accessor for the HBase family name for the version of this class. 
+     * Extracts the family name using the following priorities
+     * <ul>
+     * <li>If column is specified as "a:b" then takes "a" as the family name.</li>
+     * <li>Otherwise takes the column name as the family name when it is specified</li>
+     * <li>Otherwise takes table name as the family name</li>
+     * </ul>
+     * @param vermd Metadata for the version
+     * @return The family name
+     */
+    public static String getFamilyName(VersionMetaData vermd)
+    {
+        String columnName = null;
+
+        // Try the first column if specified
+        ColumnMetaData[] colmds = vermd.getColumnMetaData();
+        if (colmds != null && colmds.length > 0)
+        {
+            columnName = colmds[0].getName();
+        }
+        if (columnName == null)
+        {
+            // Fallback to table name.
+            columnName = getTableName((AbstractClassMetaData)vermd.getParent());
+        }
+        else if (columnName.indexOf(":")>-1)
+        {
+            columnName = columnName.substring(0,columnName.indexOf(":"));
+        }
+        return columnName;
+    }
+
+    /**
+     * Accessor for the HBase qualifier name for this version. 
+     * Extracts the qualifier name using the following priorities
+     * <ul>
+     * <li>If column is specified as "a:b" then takes "b" as the qualifier name.</li>
+     * <li>Otherwise takes the column name as the qualifier name when it is specified</li>
+     * <li>Otherwise takes "VERSION" as the qualifier name</li>
+     * </ul>
+     * @param acmd Metadata for the class
+     * @param absoluteFieldNumber Field number
+     * @return The qualifier name
+     */
+    public static String getQualifierName(VersionMetaData vermd)
+    {
+        String columnName = null;
+
+        // Try the first column if specified
+        ColumnMetaData[] colmds = vermd.getColumnMetaData();
+        if (colmds != null && colmds.length > 0)
+        {
+            columnName = colmds[0].getName();
+        }
+        if (columnName == null)
+        {
+            // Fallback to "VERSION"
+            columnName = "VERSION";
+        }
+        if (columnName.indexOf(":")>-1)
+        {
+            columnName = columnName.substring(columnName.indexOf(":")+1);
+        }
+        return columnName;
+    }
+    
+    /**
+     * Accessor for the HBase family name for this field. Extracts the family name using the following priorities
+     * <ul>
+     * <li>If column is specified as "a:b" then takes "a" as the family name.</li>
+     * <li>Otherwise takes the column name as the family name when it is specified</li>
+     * <li>Otherwise takes the table name as the family name</li>
+     * </ul>
+     * @param acmd Metadata for the class
+     * @param absoluteFieldNumber Field number
+     * @return The family name
+     */
     public static String getFamilyName(AbstractClassMetaData acmd, int absoluteFieldNumber)
     {
         AbstractMemberMetaData ammd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(absoluteFieldNumber);
@@ -65,6 +149,17 @@ public class HBaseUtils
         return columnName;
     }
 
+    /**
+     * Accessor for the HBase qualifier name for this field. Extracts the qualifier name using the following priorities
+     * <ul>
+     * <li>If column is specified as "a:b" then takes "b" as the qualifier name.</li>
+     * <li>Otherwise takes the column name as the qualifier name when it is specified</li>
+     * <li>Otherwise takes the field name as the qualifier name</li>
+     * </ul>
+     * @param acmd Metadata for the class
+     * @param absoluteFieldNumber Field number
+     * @return The qualifier name
+     */
     public static String getQualifierName(AbstractClassMetaData acmd, int absoluteFieldNumber)
     {
         AbstractMemberMetaData ammd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(absoluteFieldNumber);
