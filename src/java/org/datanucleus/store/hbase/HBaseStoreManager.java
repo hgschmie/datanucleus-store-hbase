@@ -25,6 +25,7 @@ import java.util.Set;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.NucleusContext;
+import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.MetaDataListener;
 import org.datanucleus.store.AbstractStoreManager;
 import org.datanucleus.store.ExecutionContext;
@@ -106,6 +107,17 @@ public class HBaseStoreManager extends AbstractStoreManager
     public NucleusConnection getNucleusConnection(ExecutionContext om)
     {
         throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Method defining which value-strategy to use when the user specifies "native".
+     * @param cmd Class requiring the strategy
+     * @param absFieldNumber Field of the class
+     * @return Just returns "uuid-hex".
+     */
+    protected String getStrategyForNative(AbstractClassMetaData cmd, int absFieldNumber)
+    {
+        return "uuid-hex";
     }
 
     /**
