@@ -241,11 +241,12 @@ public class HBaseUtils
     
     /**
      * Create a schema in HBase. Do not make this method public, since it uses privileged actions
-     * @param config
-     * @param acmd
+     * @param config HBase config
+     * @param acmd Metadata for the class
      * @param autoCreateColumns
      */
-    static void createSchema(final HBaseConfiguration config, final AbstractClassMetaData acmd, final boolean autoCreateColumns)
+    static void createSchemaForClass(final HBaseConfiguration config, final AbstractClassMetaData acmd, 
+            final boolean autoCreateColumns)
     {
         try
         {
@@ -267,7 +268,7 @@ public class HBaseUtils
                     {
                         hTable = hBaseAdmin.getTableDescriptor(tableName.getBytes());
                     }
-                    catch(TableNotFoundException ex)
+                    catch (TableNotFoundException ex)
                     {
                         hTable = new HTableDescriptor(tableName);
                         hBaseAdmin.createTable(hTable);
@@ -310,6 +311,59 @@ public class HBaseUtils
                     });
                 }
             }
+        }
+        catch (PrivilegedActionException e)
+        {
+            throw new NucleusDataStoreException(e.getMessage(), e.getCause());
+        }
+    }
+    /**
+     * Delete the schema for the specified class from HBase.
+     * Do not make this method public, since it uses privileged actions
+     * @param config HBase config
+     * @param acmd Metadata for the class
+     * @param autoCreateColumns
+     */
+    static void deleteSchemaForClass(final HBaseConfiguration config, final AbstractClassMetaData acmd)
+    {
+        try
+        {
+            final HBaseAdmin hBaseAdmin = (HBaseAdmin) AccessController.doPrivileged(new PrivilegedExceptionAction()
+            {
+                public Object run() throws Exception
+                {
+                    return new HBaseAdmin(config);
+                }
+            });
+            
+            final HTableDescriptor hTable = (HTableDescriptor) AccessController.doPrivileged(new PrivilegedExceptionAction()
+            {
+                public Object run() throws Exception
+                {
+                    String tableName = HBaseUtils.getTableName(acmd);
+                    HTableDescriptor hTable;
+                    try
+                    {
+                        hTable = hBaseAdmin.getTableDescriptor(tableName.getBytes());
+                    }
+                    catch (TableNotFoundException ex)
+                    {
+                        hTable = new HTableDescriptor(tableName);
+                        hBaseAdmin.createTable(hTable);
+                    }
+                    return hTable;
+                }
+            });
+
+            AccessController.doPrivileged(new PrivilegedExceptionAction()
+            {
+                public Object run() throws Exception
+                {
+                    hBaseAdmin.disableTable(hTable.getName());
+                    hBaseAdmin.deleteTable(hTable.getName());
+                    return null;
+                }
+            });
         }
         catch (PrivilegedActionException e)
         {
