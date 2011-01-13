@@ -19,7 +19,9 @@ package org.datanucleus.store.hbase;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -30,8 +32,9 @@ import org.datanucleus.metadata.MetaDataListener;
 import org.datanucleus.store.AbstractStoreManager;
 import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.NucleusConnection;
+import org.datanucleus.store.schema.SchemaAwareStoreManager;
 
-public class HBaseStoreManager extends AbstractStoreManager
+public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwareStoreManager
 {
     MetaDataListener metadataListener;
 
@@ -153,5 +156,41 @@ public class HBaseStoreManager extends AbstractStoreManager
     public int getPoolTimeBetweenEvictionRunsMillis()
     {
         return poolTimeBetweenEvictionRunsMillis;
+    }
+
+    /* (non-Javadoc)
+     * @see org.datanucleus.store.schema.SchemaAwareStoreManager#createSchema(java.util.Set, java.util.Properties)
+     */
+    public void createSchema(Set<String> classNames, Properties props)
+    {
+        Iterator<String> classIter = classNames.iterator();
+        ClassLoaderResolver clr = nucleusContext.getClassLoaderResolver(null);
+        while (classIter.hasNext())
+        {
+            String className = classIter.next();
+            AbstractClassMetaData cmd = getMetaDataManager().getMetaDataForClass(className, clr);
+            if (cmd != null)
+            {
+                HBaseUtils.createSchema(getHbaseConfig(), cmd, isAutoCreateColumns());
+            }
+        }
+    }
+
+    /* (non-Javadoc)
+     * @see org.datanucleus.store.schema.SchemaAwareStoreManager#deleteSchema(java.util.Set)
+     */
+    public void deleteSchema(Set<String> classNames)
+    {
+        // TODO Auto-generated method stub
+        
+    }
+
+    /* (non-Javadoc)
+     * @see org.datanucleus.store.schema.SchemaAwareStoreManager#validateSchema(java.util.Set)
+     */
+    public void validateSchema(Set<String> classNames)
+    {
+        // TODO Auto-generated method stub
+        
     }
 }
