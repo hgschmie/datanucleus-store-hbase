@@ -36,4 +36,8 @@ Contributors:
             datastore="hbase"/>
     </extension>
 
+    <!-- VALUE GENERATORS -->
+    <extension point="org.datanucleus.store_valuegenerator">
+        <valuegenerator name="increment" class-name="org.datanucleus.store.hbase.valuegenerator.IncrementGenerator" datastore="hbase"/>
+    </extension>
 </plugin>

@@ -43,11 +43,6 @@ public class HBaseMetaDataListener implements MetaDataListener
      */
     public void loaded(AbstractClassMetaData cmd)
     {
-/*        if (cmd.getIdentityType() == IdentityType.DATASTORE && !cmd.isEmbeddedOnly())
-        {
-            // Datastore id not supported
-            throw new InvalidMetaDataException(LOCALISER, "HBase.DatastoreID", cmd.getFullClassName());
-        }*/
         if (storeManager.isAutoCreateTables() || storeManager.isAutoCreateColumns())
         {
             HBaseUtils.createSchema(storeManager.getHbaseConfig(), cmd, storeManager.isAutoCreateColumns());

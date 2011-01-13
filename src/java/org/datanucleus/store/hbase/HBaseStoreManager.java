@@ -52,7 +52,7 @@ public class HBaseStoreManager extends AbstractStoreManager
     public HBaseStoreManager(ClassLoaderResolver clr, NucleusContext ctx, Map<String, Object> props)
     {
         super("hbase", clr, ctx, props);
-                
+
         // Handler for metadata
         metadataListener = new HBaseMetaDataListener(this);
         ctx.getMetaDataManager().registerListener(metadataListener);
@@ -78,14 +78,14 @@ public class HBaseStoreManager extends AbstractStoreManager
         {
             poolTimeBetweenEvictionRunsMillis = 15 * 1000; // default, 15 secs
         }
-         
+
         // how long may a connection sit idle in the pool before it may be evicted
         poolMinEvictableIdleTimeMillis = getIntProperty("datanucleus.connectionPool.minEvictableIdleTimeMillis");
         if (poolMinEvictableIdleTimeMillis == 0)
         {
             poolMinEvictableIdleTimeMillis = 30 * 1000; // default, 30 secs
         }
-                
+
         logConfiguration();
     }
 
@@ -95,9 +95,6 @@ public class HBaseStoreManager extends AbstractStoreManager
         this.connectionMgr.disableConnectionPool();
     }
 
-    /**
-     * Release of resources
-     */
     public void close()
     {
         nucleusContext.getMetaDataManager().deregisterListener(metadataListener);
@@ -132,27 +129,27 @@ public class HBaseStoreManager extends AbstractStoreManager
         set.add("ORM");
         return set;
     }
-    
+
     public HBaseConfiguration getHbaseConfig()
     {
         return hbaseConfig;
     }
-    
+
     public boolean isAutoCreateColumns()
     {
         return autoCreateColumns;
     }
-    
+
     public boolean isAutoCreateTables()
     {
         return autoCreateTables;
     }
-    
+
     public int getPoolMinEvictableIdleTimeMillis()
     {
         return poolMinEvictableIdleTimeMillis;
     }
-    
+
     public int getPoolTimeBetweenEvictionRunsMillis()
     {
         return poolTimeBetweenEvictionRunsMillis;
