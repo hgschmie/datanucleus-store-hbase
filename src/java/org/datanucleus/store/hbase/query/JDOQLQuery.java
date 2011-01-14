@@ -91,7 +91,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
             else
             {
                 candidates = HBaseQueryUtils.getObjectsOfCandidateType(ec, mconn, candidateClass, subclasses,
-                    ignoreCache);
+                    ignoreCache, getFetchPlan());
             }
 
             // Apply any result restrictions to the results

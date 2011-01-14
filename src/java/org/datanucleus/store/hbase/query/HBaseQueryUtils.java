@@ -56,10 +56,11 @@ class HBaseQueryUtils
      * @param candidateClass Candidate
      * @param subclasses Include subclasses?
      * @param ignoreCache Whether to ignore the cache
+     * @param fetchPlan Fetch Plan
      * @return List of objects of the candidate type (or subclass)
      */
     static List getObjectsOfCandidateType(final ExecutionContext ec, final HBaseManagedConnection mconn,
-            Class candidateClass, boolean subclasses, boolean ignoreCache)
+            Class candidateClass, boolean subclasses, boolean ignoreCache, FetchPlan fetchPlan)
     {
         List results = new ArrayList();
         try
@@ -73,26 +74,29 @@ class HBaseQueryUtils
                 {
                     HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
 
-                    Scan scan = new Scan();
                     // Set up to retrieve all fields, plus optional version and datastore identity columns
+                    // TODO Respect FetchPlan
                     int[] fieldNumbers =  acmd.getAllMemberPositions();
-                    for(int i=0; i<fieldNumbers.length; i++)
+                    Scan scan = new Scan();
+                    for (int i=0; i<fieldNumbers.length; i++)
                     {
-                        byte[] familyNames = HBaseUtils.getFamilyName(acmd,fieldNumbers[i]).getBytes();
-                        byte[] columnNames = HBaseUtils.getQualifierName(acmd, fieldNumbers[i]).getBytes();
-                        scan.addColumn(familyNames,columnNames);
+                        byte[] familyName = HBaseUtils.getFamilyName(acmd,fieldNumbers[i]).getBytes();
+                        byte[] columnName = HBaseUtils.getQualifierName(acmd, fieldNumbers[i]).getBytes();
+                        scan.addColumn(familyName, columnName);
                     }
-                    if (acmd.hasVersionStrategy())
+                    if (acmd.hasVersionStrategy() && acmd.getVersionMetaData().getFieldName() == null)
                     {
-                        byte[] familyNames = HBaseUtils.getFamilyName(acmd.getVersionMetaData()).getBytes();
-                        byte[] columnNames = HBaseUtils.getQualifierName(acmd.getVersionMetaData()).getBytes();
-                        scan.addColumn(familyNames,columnNames);
+                        // Add version column
+                        byte[] familyName = HBaseUtils.getFamilyName(acmd.getVersionMetaData()).getBytes();
+                        byte[] columnName = HBaseUtils.getQualifierName(acmd.getVersionMetaData()).getBytes();
+                        scan.addColumn(familyName, columnName);
                     }
                     if (acmd.getIdentityType() == IdentityType.DATASTORE)
                     {
-                        byte[] familyNames = HBaseUtils.getFamilyName(acmd.getIdentityMetaData()).getBytes();
-                        byte[] columnNames = HBaseUtils.getQualifierName(acmd.getIdentityMetaData()).getBytes();
-                        scan.addColumn(familyNames,columnNames);
+                        // Add datastore identity column
+                        byte[] familyName = HBaseUtils.getFamilyName(acmd.getIdentityMetaData()).getBytes();
+                        byte[] columnName = HBaseUtils.getQualifierName(acmd.getIdentityMetaData()).getBytes();
+                        scan.addColumn(familyName, columnName);
                     }
                     ResultScanner scanner = table.getScanner(scan);
                     Iterator<Result> it = scanner.iterator();
@@ -110,7 +114,6 @@ class HBaseQueryUtils
                     results.add(ec.findObject(id, 
                         new FieldValues2()
                         {
-                            // StateManager calls the fetchFields method
                             public void fetchFields(ObjectProvider sm)
                             {
                                 sm.replaceFields(acmd.getAllMemberPositions(), new FetchFieldManager(ec, acmd, result));
