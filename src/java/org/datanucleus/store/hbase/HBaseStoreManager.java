@@ -28,7 +28,12 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.NucleusContext;
 import org.datanucleus.metadata.AbstractClassMetaData;
+import org.datanucleus.metadata.AbstractMemberMetaData;
+import org.datanucleus.metadata.IdentityMetaData;
+import org.datanucleus.metadata.IdentityStrategy;
 import org.datanucleus.metadata.MetaDataListener;
+import org.datanucleus.metadata.SequenceMetaData;
+import org.datanucleus.metadata.TableGeneratorMetaData;
 import org.datanucleus.store.AbstractStoreManager;
 import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.NucleusConnection;
@@ -156,6 +161,48 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
     public int getPoolTimeBetweenEvictionRunsMillis()
     {
         return poolTimeBetweenEvictionRunsMillis;
+    }
+
+    /**
+     * Method to return the properties to pass to the generator for the specified field.
+     * Takes the superclass properties and adds on the "table-name" where appropriate.
+     * @param cmd MetaData for the class
+     * @param absoluteFieldNumber Number of the field (-1 = datastore identity)
+     * @param ec execution context
+     * @param seqmd Any sequence metadata
+     * @param tablegenmd Any table generator metadata
+     * @return The properties to use for this field
+     */
+    protected Properties getPropertiesForGenerator(AbstractClassMetaData cmd, int absoluteFieldNumber,
+            ExecutionContext ec, SequenceMetaData seqmd, TableGeneratorMetaData tablegenmd)
+    {
+        Properties props = super.getPropertiesForGenerator(cmd, absoluteFieldNumber, ec, seqmd, tablegenmd);
+
+        IdentityStrategy strategy = null;
+        if (absoluteFieldNumber >= 0)
+        {
+            // real field
+            AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(absoluteFieldNumber);
+            strategy = mmd.getValueStrategy();
+        }
+        else
+        {
+            // datastore-identity surrogate field
+            // always use the root IdentityMetaData since the root class defines the identity
+            IdentityMetaData idmd = cmd.getBaseIdentityMetaData();
+            strategy = idmd.getValueStrategy();
+        }
+
+        props.setProperty("table-name", HBaseUtils.getTableName(cmd));
+
+        if (strategy == IdentityStrategy.INCREMENT && tablegenmd != null)
+        {
+            // User has specified a TableGenerator (JPA)
+            // Using JPA generator so don't enable initial value detection
+            props.remove("table-name");
+        }
+
+        return props;
     }
 
     /* (non-Javadoc)

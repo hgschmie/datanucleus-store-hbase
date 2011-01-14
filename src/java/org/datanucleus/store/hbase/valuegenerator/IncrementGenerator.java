@@ -41,6 +41,8 @@ import org.datanucleus.util.NucleusLogger;
  */
 public class IncrementGenerator extends AbstractDatastoreGenerator implements ValueGenerator
 {
+    static final String INCREMENT_COL_NAME = "increment";
+
     /** Key used in the Table to access the increment count */
     private String key;
 
@@ -67,10 +69,18 @@ public class IncrementGenerator extends AbstractDatastoreGenerator implements Va
     {
         super(name, props);
         this.key = properties.getProperty("field-name", name);
-        this.tableName = "IncrementTable"; // TODO Make as property
+        this.tableName = properties.getProperty("sequence-table-name");
+        if (properties.containsKey("key-cache-size"))
+        {
+            allocationSize = Integer.valueOf(properties.getProperty("key-cache-size"));
+        }
+        else
+        {
+            allocationSize = 1;
+        }
     }
 
-    private synchronized void init()
+    private synchronized void initialiseTable()
     {
         if (this.table == null)
         {
@@ -79,31 +89,27 @@ public class IncrementGenerator extends AbstractDatastoreGenerator implements Va
                 HBaseStoreManager hbaseMgr = (HBaseStoreManager) storeMgr;
                 HBaseAdmin admin = new HBaseAdmin(hbaseMgr.getHbaseConfig());
 
-                NucleusLogger.DATASTORE_PERSIST.info("IncrementGenerator: Check if Table '" + 
-                    this.tableName + "' exists");
                 if (!admin.tableExists(this.tableName))
                 {
-                    NucleusLogger.DATASTORE_PERSIST.info("IncrementGenerator: Create Table '" + this.tableName + "'");
+                    NucleusLogger.DATASTORE_PERSIST.info("IncrementGenerator: Creating Table '" + this.tableName + "'");
                     HTableDescriptor ht = new HTableDescriptor(this.tableName);
-                    HColumnDescriptor hcd = new HColumnDescriptor("increment");
+                    HColumnDescriptor hcd = new HColumnDescriptor(INCREMENT_COL_NAME);
                     hcd.setCompressionType(Algorithm.NONE);
                     hcd.setMaxVersions(1);
                     ht.addFamily(hcd);
                     admin.createTable(ht);
-                    NucleusLogger.DATASTORE_PERSIST.info("IncrementGenerator: Table '" + this.tableName + "' created");
                 }
 
-                NucleusLogger.DATASTORE_PERSIST.info("IncrementGenerator: Getting Table");
                 this.table = new HTable(this.tableName);
-                NucleusLogger.DATASTORE_PERSIST.info("IncrementGenerator: Got Table");
                 if (!this.table.exists(new Get(Bytes.toBytes(key))))
                 {
-                    NucleusLogger.DATASTORE_PERSIST.info("IncrementGenerator: Putting Start record into table '" + 
-                        this.tableName + "' with key '" + key + "'");
-                    this.table.put(new Put(Bytes.toBytes(key)).add(Bytes.toBytes("increment"), 
-                        Bytes.toBytes("increment"), Bytes.toBytes(0l)));
-                    NucleusLogger.DATASTORE_PERSIST.info("IncrementGenerator: Put Start into table '" + 
-                        this.tableName + "' record with key '" + key + "'");
+                    long initialValue = 0;
+                    if (properties.containsKey("key-initial-value"))
+                    {
+                        initialValue = Long.valueOf(properties.getProperty("key-initial-value"))-1;
+                    }
+                    this.table.put(new Put(Bytes.toBytes(key)).add(Bytes.toBytes(INCREMENT_COL_NAME), 
+                        Bytes.toBytes(INCREMENT_COL_NAME), Bytes.toBytes(initialValue)));
                 }
             }
             catch (IOException ex)
@@ -130,17 +136,21 @@ public class IncrementGenerator extends AbstractDatastoreGenerator implements Va
 
         if (this.table == null)
         {
-            this.init();
+            this.initialiseTable();
         }
 
-        // Allocate single value
+        // Allocate value(s)
         long number;
         List oids = new ArrayList();
         try
         {
-            number = table.incrementColumnValue(Bytes.toBytes(key), Bytes.toBytes("increment"), 
-                Bytes.toBytes("increment"), 1); // TODO Make "increment" as property
-            oids.add(number);
+            number = table.incrementColumnValue(Bytes.toBytes(key), Bytes.toBytes(INCREMENT_COL_NAME), 
+                Bytes.toBytes(INCREMENT_COL_NAME), size);
+            long nextNumber = number - size + 1;
+            for (int i=0;i<size;i++)
+            {
+                oids.add(nextNumber++);
+            }
         }
         catch (IOException ex)
         {
