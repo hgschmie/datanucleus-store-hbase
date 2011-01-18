@@ -218,7 +218,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
             AbstractClassMetaData cmd = getMetaDataManager().getMetaDataForClass(className, clr);
             if (cmd != null)
             {
-                HBaseUtils.createSchemaForClass(this, cmd, isAutoCreateColumns());
+                HBaseUtils.createSchemaForClass(this, cmd, isAutoCreateColumns(), false);
             }
         }
     }
@@ -246,7 +246,16 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
      */
     public void validateSchema(Set<String> classNames)
     {
-        // TODO Auto-generated method stub
-        
+        Iterator<String> classIter = classNames.iterator();
+        ClassLoaderResolver clr = nucleusContext.getClassLoaderResolver(null);
+        while (classIter.hasNext())
+        {
+            String className = classIter.next();
+            AbstractClassMetaData cmd = getMetaDataManager().getMetaDataForClass(className, clr);
+            if (cmd != null)
+            {
+                HBaseUtils.createSchemaForClass(this, cmd, isAutoCreateColumns(), true);
+            }
+        }
     }
 }
