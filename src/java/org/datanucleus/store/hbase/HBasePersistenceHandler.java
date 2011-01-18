@@ -80,18 +80,26 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         }
 
         AbstractClassMetaData cmd = sm.getClassMetaData();
-        if (cmd.getIdentityType() == IdentityType.APPLICATION || cmd.getIdentityType() == IdentityType.DATASTORE)
+        boolean enforceUniquenessInApp = storeMgr.getBooleanProperty("datanucleus.hbase.enforceUniquenessInApplication", false);
+        if (enforceUniquenessInApp)
         {
-            // Enforce uniqueness of datastore rows
-            try
+            NucleusLogger.DATASTORE_PERSIST.info("User requesting to enforce uniqueness of object identity in their application, so not checking for existence");
+        }
+        else
+        {
+            if (cmd.getIdentityType() == IdentityType.APPLICATION || cmd.getIdentityType() == IdentityType.DATASTORE)
             {
-                locateObject(sm);
-                throw new NucleusUserException(LOCALISER.msg("HBase.Insert.ObjectWithIdAlreadyExists", 
-                    sm.toPrintableID(), sm.getInternalObjectId()));
-            }
-            catch (NucleusObjectNotFoundException onfe)
-            {
-                // Do nothing since object with this id doesn't exist
+                // Enforce uniqueness of datastore rows in this plugin
+                try
+                {
+                    locateObject(sm);
+                    throw new NucleusUserException(LOCALISER.msg("HBase.Insert.ObjectWithIdAlreadyExists", 
+                        sm.toPrintableID(), sm.getInternalObjectId()));
+                }
+                catch (NucleusObjectNotFoundException onfe)
+                {
+                    // Do nothing since object with this id doesn't exist
+                }
             }
         }
 

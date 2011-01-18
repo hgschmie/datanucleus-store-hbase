@@ -40,4 +40,10 @@ Contributors:
     <extension point="org.datanucleus.store_valuegenerator">
         <valuegenerator name="increment" class-name="org.datanucleus.store.hbase.valuegenerator.IncrementGenerator" datastore="hbase"/>
     </extension>
+
+    <!-- PERSISTENCE PROPERTIES -->
+    <extension point="org.datanucleus.persistence_properties">
+        <persistence-property name="datanucleus.hbase.enforceUniquenessInApplication" datastore="true" value="false"
+            validator="org.datanucleus.properties.BooleanPropertyValidator"/>
+    </extension>
 </plugin>
