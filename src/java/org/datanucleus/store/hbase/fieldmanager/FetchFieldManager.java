@@ -30,19 +30,22 @@ import org.apache.hadoop.hbase.client.Result;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
+import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
+import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.Relation;
 import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.ObjectProvider;
 import org.datanucleus.store.fieldmanager.AbstractFieldManager;
+import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseUtils;
+import org.datanucleus.store.types.ObjectStringConverter;
 import org.datanucleus.store.types.sco.SCOUtils;
 
 public class FetchFieldManager extends AbstractFieldManager
 {
     Result result;
-
     ExecutionContext ec;
     ObjectProvider sm;
     AbstractClassMetaData acmd;
@@ -118,7 +121,7 @@ public class FetchFieldManager extends AbstractFieldManager
         {
             throw new NucleusException(e.getMessage(), e);
         }
-        return value;    
+        return value;
     }
 
     public double fetchDoubleField(int fieldNumber)
@@ -139,7 +142,7 @@ public class FetchFieldManager extends AbstractFieldManager
         {
             throw new NucleusException(e.getMessage(), e);
         }
-        return value; 
+        return value;
     }
 
     public float fetchFloatField(int fieldNumber)
@@ -207,6 +210,46 @@ public class FetchFieldManager extends AbstractFieldManager
 
     public Object fetchObjectField(int fieldNumber)
     {
+        ClassLoaderResolver clr = ec.getClassLoaderResolver();
+        AbstractMemberMetaData mmd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
+        int relationType = mmd.getRelationType(clr);
+        if ((relationType == Relation.ONE_TO_ONE_UNI || relationType == Relation.ONE_TO_ONE_BI) && mmd.isEmbedded())
+        {
+            // TODO Cater for null (use embmd.getNullIndicatorColumn/Value)
+            // Persistable object embedded into table of this object
+            Class embcls = mmd.getType();
+            AbstractClassMetaData embcmd = ec.getMetaDataManager().getMetaDataForClass(embcls, clr);
+            if (embcmd != null)
+            {
+                String tableName = HBaseUtils.getTableName(acmd);
+                EmbeddedMetaData embmd = mmd.getEmbeddedMetaData();
+                AbstractMemberMetaData[] embmmds = embmd.getMemberMetaData();
+
+                // Check for null value (currently need all columns to return null)
+                boolean isNull = true;
+                for (int i=0;i<embmmds.length;i++)
+                {
+                    String familyName = HBaseUtils.getFamilyName(mmd, i, tableName);
+                    String columnName = HBaseUtils.getQualifierName(mmd, i);
+                    if (result.getValue(familyName.getBytes(), columnName.getBytes()) != null)
+                    {
+                        isNull = false;
+                        break;
+                    }
+                }
+                if (isNull)
+                {
+                    return null;
+                }
+
+                ObjectProvider embSM = ec.newObjectProviderForMember(mmd, embcmd);
+                FieldManager ffm = new FetchEmbeddedFieldManager(embSM, result, mmd, HBaseUtils.getTableName(acmd));
+                embSM.replaceFields(embcmd.getAllMemberPositions(), ffm);
+                return embSM.getObject();
+            }
+            throw new NucleusUserException("Field " + mmd.getFullFieldName() + " marked as embedded but no such metadata");
+        }
+
         String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
         String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
         Object value;
@@ -235,11 +278,8 @@ public class FetchFieldManager extends AbstractFieldManager
             throw new NucleusException(e.getMessage(), e);
         }
 
-        ClassLoaderResolver clr = ec.getClassLoaderResolver();
-        AbstractMemberMetaData mmd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
-        int relationType = mmd.getRelationType(clr);
         if (relationType == Relation.ONE_TO_ONE_BI || relationType == Relation.ONE_TO_ONE_UNI ||
-                relationType == Relation.MANY_TO_ONE_BI || relationType == Relation.MANY_TO_ONE_UNI)
+            relationType == Relation.MANY_TO_ONE_BI || relationType == Relation.MANY_TO_ONE_UNI)
         {
             if (mmd.isSerialized())
             {
@@ -254,7 +294,7 @@ public class FetchFieldManager extends AbstractFieldManager
         else if (relationType == Relation.ONE_TO_MANY_UNI || relationType == Relation.ONE_TO_MANY_BI ||
                 relationType == Relation.MANY_TO_MANY_BI)
         {
-            // TODO Replace with SCO
+            // TODO Replace with SCO wrapper
             if (mmd.hasCollection())
             {
                 if (mmd.isSerialized())
@@ -307,9 +347,21 @@ public class FetchFieldManager extends AbstractFieldManager
                 }
                 return array;
             }
+            throw new NucleusUserException("No container that isnt collection/map/array");
         }
-        // TODO Replace with SCO
-        return value;
+        else
+        {
+            ObjectStringConverter strConv = 
+                ec.getNucleusContext().getTypeManager().getStringConverter(value.getClass());
+            if (!mmd.isSerialized() && strConv != null)
+            {
+                // Persisted as a String, so convert back
+                String strValue = (String)value;
+                return strConv.toObject(strValue);
+            }
+            // TODO Return SCO wrapper when possible
+            return value;
+        }
     }
 
     public short fetchShortField(int fieldNumber)

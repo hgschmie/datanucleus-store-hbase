@@ -38,7 +38,10 @@ import org.datanucleus.identity.IdentityUtils;
 import org.datanucleus.identity.OID;
 import org.datanucleus.identity.OIDFactory;
 import org.datanucleus.metadata.AbstractClassMetaData;
+import org.datanucleus.metadata.AbstractMemberMetaData;
+import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.IdentityType;
+import org.datanucleus.metadata.Relation;
 import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.FieldValues2;
 import org.datanucleus.store.ObjectProvider;
@@ -80,9 +83,18 @@ class HBaseQueryUtils
                     Scan scan = new Scan();
                     for (int i=0; i<fieldNumbers.length; i++)
                     {
-                        byte[] familyName = HBaseUtils.getFamilyName(acmd,fieldNumbers[i]).getBytes();
-                        byte[] columnName = HBaseUtils.getQualifierName(acmd, fieldNumbers[i]).getBytes();
-                        scan.addColumn(familyName, columnName);
+                        AbstractMemberMetaData mmd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumbers[i]);
+                        int relationType = mmd.getRelationType(clr);
+                        if ((relationType == Relation.ONE_TO_ONE_UNI || relationType == Relation.ONE_TO_ONE_BI) && mmd.isEmbedded())
+                        {
+                            addColumnsToScanForEmbeddedMember(scan, mmd, HBaseUtils.getTableName(acmd), ec);
+                        }
+                        else
+                        {
+                            byte[] familyName = HBaseUtils.getFamilyName(acmd, fieldNumbers[i]).getBytes();
+                            byte[] columnName = HBaseUtils.getQualifierName(acmd, fieldNumbers[i]).getBytes();
+                            scan.addColumn(familyName, columnName);
+                        }
                     }
                     if (acmd.hasVersionStrategy() && acmd.getVersionMetaData().getFieldName() == null)
                     {
@@ -185,5 +197,27 @@ class HBaseQueryUtils
             throw new NucleusDataStoreException(e.getMessage(), e.getCause());
         }
         return results;
+    }
+
+    private static void addColumnsToScanForEmbeddedMember(Scan scan, AbstractMemberMetaData mmd, String tableName, ExecutionContext ec)
+    {
+        EmbeddedMetaData embmd = mmd.getEmbeddedMetaData();
+        ClassLoaderResolver clr = ec.getClassLoaderResolver();
+        AbstractMemberMetaData[] embmmds = embmd.getMemberMetaData();
+        for (int i=0;i<embmmds.length;i++)
+        {
+            AbstractMemberMetaData embMmd = embmmds[i];
+            int relationType = embMmd.getRelationType(clr);
+            if ((relationType == Relation.ONE_TO_ONE_BI || relationType == Relation.ONE_TO_ONE_UNI) && embMmd.isEmbedded())
+            {
+                addColumnsToScanForEmbeddedMember(scan, embMmd, tableName, ec);
+            }
+            else
+            {
+                byte[] familyName = HBaseUtils.getFamilyName(mmd, i, tableName).getBytes();
+                byte[] columnName = HBaseUtils.getQualifierName(mmd, i).getBytes();
+                scan.addColumn(familyName, columnName);
+            }
+        }
     }
 }
