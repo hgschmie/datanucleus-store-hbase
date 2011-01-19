@@ -215,17 +215,17 @@ public class FetchFieldManager extends AbstractFieldManager
         int relationType = mmd.getRelationType(clr);
         if ((relationType == Relation.ONE_TO_ONE_UNI || relationType == Relation.ONE_TO_ONE_BI) && mmd.isEmbedded())
         {
-            // TODO Cater for null (use embmd.getNullIndicatorColumn/Value)
             // Persistable object embedded into table of this object
             Class embcls = mmd.getType();
             AbstractClassMetaData embcmd = ec.getMetaDataManager().getMetaDataForClass(embcls, clr);
             if (embcmd != null)
             {
                 String tableName = HBaseUtils.getTableName(acmd);
-                EmbeddedMetaData embmd = mmd.getEmbeddedMetaData();
-                AbstractMemberMetaData[] embmmds = embmd.getMemberMetaData();
 
                 // Check for null value (currently need all columns to return null)
+                // TODO Cater for null (use embmd.getNullIndicatorColumn/Value)
+                EmbeddedMetaData embmd = mmd.getEmbeddedMetaData();
+                AbstractMemberMetaData[] embmmds = embmd.getMemberMetaData();
                 boolean isNull = true;
                 for (int i=0;i<embmmds.length;i++)
                 {
@@ -244,7 +244,7 @@ public class FetchFieldManager extends AbstractFieldManager
 
                 ObjectProvider embSM = ec.newObjectProviderForMember(mmd, embcmd);
                 embSM.addEmbeddedOwner(sm, fieldNumber);
-                FieldManager ffm = new FetchEmbeddedFieldManager(embSM, result, mmd, HBaseUtils.getTableName(acmd));
+                FieldManager ffm = new FetchEmbeddedFieldManager(embSM, result, mmd, tableName);
                 embSM.replaceFields(embcmd.getAllMemberPositions(), ffm);
                 return embSM.getObject();
             }

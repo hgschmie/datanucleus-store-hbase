@@ -31,6 +31,7 @@ import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
+import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.Relation;
 import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.ObjectProvider;
@@ -311,12 +312,31 @@ public class FetchEmbeddedFieldManager extends AbstractFieldManager
         int relationType = embMmd.getRelationType(clr);
         if ((relationType == Relation.ONE_TO_ONE_UNI || relationType == Relation.ONE_TO_ONE_BI) && embMmd.isEmbedded())
         {
-            // TODO Cater for null
             // Persistable object embedded into table of this object
             Class embcls = embMmd.getType();
             AbstractClassMetaData embcmd = ec.getMetaDataManager().getMetaDataForClass(embcls, clr);
             if (embcmd != null)
             {
+                // Check for null value (currently need all columns to return null)
+                // TODO Cater for null using embmd.getNullIndicatorColumn etc
+                EmbeddedMetaData embmd = mmd.getEmbeddedMetaData();
+                AbstractMemberMetaData[] embmmds = embmd.getMemberMetaData();
+                boolean isNull = true;
+                for (int i=0;i<embmmds.length;i++)
+                {
+                    String familyName = HBaseUtils.getFamilyName(mmd, i, tableName);
+                    String columnName = HBaseUtils.getQualifierName(mmd, i);
+                    if (result.getValue(familyName.getBytes(), columnName.getBytes()) != null)
+                    {
+                        isNull = false;
+                        break;
+                    }
+                }
+                if (isNull)
+                {
+                    return null;
+                }
+
                 ObjectProvider embSM = ec.newObjectProviderForMember(embMmd, embcmd);
                 embSM.addEmbeddedOwner(sm, fieldNumber);
                 FieldManager ffm = new FetchEmbeddedFieldManager(embSM, result, embMmd, tableName);
