@@ -194,7 +194,6 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
         }
 
         props.setProperty("table-name", HBaseUtils.getTableName(cmd));
-
         if (strategy == IdentityStrategy.INCREMENT && tablegenmd != null)
         {
             // User has specified a TableGenerator (JPA)

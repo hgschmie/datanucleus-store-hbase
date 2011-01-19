@@ -244,11 +244,27 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
     {
         // Check if read-only so update not permitted
         storeMgr.assertReadOnlyForUpdateOfObject(sm);
-        
+
         HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(sm.getExecutionContext());
         try
         {
+            long startTime = System.currentTimeMillis();
             AbstractClassMetaData acmd = sm.getClassMetaData();
+            if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
+            {
+                StringBuffer fieldStr = new StringBuffer();
+                for (int i=0;i<fieldNumbers.length;i++)
+                {
+                    if (i > 0)
+                    {
+                        fieldStr.append(",");
+                    }
+                    fieldStr.append(acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumbers[i]).getName());
+                }
+                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER.msg("HBase.Update.Start", 
+                    sm.toPrintableID(), sm.getInternalObjectId(), fieldStr.toString()));
+            }
+
             HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
             Put put = newPut(sm);
             Delete delete = newDelete(sm); // we will ignore the delete object
@@ -327,11 +343,21 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             }
             if (!delete.isEmpty())
             {
-                //only delete if there are columns to delete. Otherwise an empty delete would cause the
-                //entire row to be deleted
+                // only delete if there are columns to delete. Otherwise an empty delete would cause the
+                // entire row to be deleted
                 table.delete(delete);            
             }
             table.close();
+
+            if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
+            {
+                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER.msg("HBase.ExecutionTime", 
+                    (System.currentTimeMillis() - startTime)));
+            }
+            if (storeMgr.getRuntimeManager() != null)
+            {
+                storeMgr.getRuntimeManager().incrementUpdateCount();
+            }
         }
         catch (IOException e)
         {
@@ -352,9 +378,26 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         try
         {
             AbstractClassMetaData acmd = sm.getClassMetaData();
+            long startTime = System.currentTimeMillis();
+            if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
+            {
+                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER.msg("HBase.Delete.Start", 
+                    sm.toPrintableID(), sm.getInternalObjectId()));
+            }
+
+            // Delete the object
             HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
-            
             table.delete(newDelete(sm));
+
+            if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
+            {
+                NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER.msg("HBase.ExecutionTime", 
+                    (System.currentTimeMillis() - startTime)));
+            }
+            if (storeMgr.getRuntimeManager() != null)
+            {
+                storeMgr.getRuntimeManager().incrementDeleteCount();
+            }
         }
         catch (IOException e)
         {
@@ -372,6 +415,31 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         try
         {
             AbstractClassMetaData acmd = sm.getClassMetaData();
+            if (NucleusLogger.PERSISTENCE.isDebugEnabled())
+            {
+                // Debug information about what we are retrieving
+                StringBuffer str = new StringBuffer("Fetching object \"");
+                str.append(sm.toPrintableID()).append("\" (id=");
+                str.append(sm.getExecutionContext().getApiAdapter().getObjectId(sm)).append(")").append(" fields [");
+                for (int i=0;i<fieldNumbers.length;i++)
+                {
+                    if (i > 0)
+                    {
+                        str.append(",");
+                    }
+                    str.append(acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumbers[i]).getName());
+                }
+                str.append("]");
+                NucleusLogger.PERSISTENCE.debug(str);
+            }
+
+            long startTime = System.currentTimeMillis();
+            if (NucleusLogger.DATASTORE_RETRIEVE.isDebugEnabled())
+            {
+                NucleusLogger.DATASTORE_RETRIEVE.debug(LOCALISER.msg("HBase.Fetch.Start", 
+                    sm.toPrintableID(), sm.getInternalObjectId()));
+            }
+
             HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
             Result result = getResult(sm, table);
             if (result.getRow() == null)
@@ -420,6 +488,16 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             }
 
             table.close();
+
+            if (NucleusLogger.DATASTORE_RETRIEVE.isDebugEnabled())
+            {
+                NucleusLogger.DATASTORE_RETRIEVE.debug(LOCALISER.msg("HBase.ExecutionTime",
+                    (System.currentTimeMillis() - startTime)));
+            }
+            if (storeMgr.getRuntimeManager() != null)
+            {
+                storeMgr.getRuntimeManager().incrementFetchCount();
+            }
         }
         catch (IOException e)
         {
@@ -428,7 +506,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         finally
         {
             mconn.release();
-        }    
+        }
     }
 
     public Object findObject(ExecutionContext ectx, Object id)

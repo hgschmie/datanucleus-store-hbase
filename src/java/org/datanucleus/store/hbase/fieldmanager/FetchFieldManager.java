@@ -243,6 +243,7 @@ public class FetchFieldManager extends AbstractFieldManager
                 }
 
                 ObjectProvider embSM = ec.newObjectProviderForMember(mmd, embcmd);
+                embSM.addEmbeddedOwner(sm, fieldNumber);
                 FieldManager ffm = new FetchEmbeddedFieldManager(embSM, result, mmd, HBaseUtils.getTableName(acmd));
                 embSM.replaceFields(embcmd.getAllMemberPositions(), ffm);
                 return embSM.getObject();
