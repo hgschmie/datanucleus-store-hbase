@@ -70,6 +70,10 @@ public class IncrementGenerator extends AbstractDatastoreGenerator implements Va
         super(name, props);
         this.key = properties.getProperty("field-name", name);
         this.tableName = properties.getProperty("sequence-table-name");
+        if (this.tableName == null)
+        {
+            this.tableName = "IncrementTable";
+        }
         if (properties.containsKey("key-cache-size"))
         {
             allocationSize = Integer.valueOf(properties.getProperty("key-cache-size"));
@@ -88,7 +92,6 @@ public class IncrementGenerator extends AbstractDatastoreGenerator implements Va
             {
                 HBaseStoreManager hbaseMgr = (HBaseStoreManager) storeMgr;
                 HBaseAdmin admin = new HBaseAdmin(hbaseMgr.getHbaseConfig());
-
                 if (!admin.tableExists(this.tableName))
                 {
                     NucleusLogger.DATASTORE_PERSIST.info("IncrementGenerator: Creating Table '" + this.tableName + "'");
