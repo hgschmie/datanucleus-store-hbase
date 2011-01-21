@@ -44,9 +44,6 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
     MetaDataListener metadataListener;
 
     private HBaseConfiguration hbaseConfig; 
-    
-    private boolean autoCreateTables = false;
-    private boolean autoCreateColumns = false;
 
     /**
      * Constructor.
@@ -64,18 +61,6 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
 
         persistenceHandler = new HBasePersistenceHandler(this);
         hbaseConfig = new HBaseConfiguration();
-
-        boolean autoCreateSchema = getBooleanProperty("datanucleus.autoCreateSchema");
-        if (autoCreateSchema)
-        {
-            autoCreateTables = true;
-            autoCreateColumns = true;
-        }
-        else
-        {
-            autoCreateTables = getBooleanProperty("datanucleus.autoCreateTables");
-            autoCreateColumns = getBooleanProperty("datanucleus.autoCreateColumns");
-        }
 
         logConfiguration();
     }
@@ -124,16 +109,6 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
     public HBaseConfiguration getHbaseConfig()
     {
         return hbaseConfig;
-    }
-
-    public boolean isAutoCreateColumns()
-    {
-        return autoCreateColumns;
-    }
-
-    public boolean isAutoCreateTables()
-    {
-        return autoCreateTables;
     }
 
     /**
@@ -190,7 +165,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
             AbstractClassMetaData cmd = getMetaDataManager().getMetaDataForClass(className, clr);
             if (cmd != null)
             {
-                HBaseUtils.createSchemaForClass(this, cmd, isAutoCreateColumns(), false);
+                HBaseUtils.createSchemaForClass(this, cmd, autoCreateColumns, false);
             }
         }
     }
@@ -226,7 +201,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
             AbstractClassMetaData cmd = getMetaDataManager().getMetaDataForClass(className, clr);
             if (cmd != null)
             {
-                HBaseUtils.createSchemaForClass(this, cmd, isAutoCreateColumns(), true);
+                HBaseUtils.createSchemaForClass(this, cmd, autoCreateColumns, true);
             }
         }
     }
