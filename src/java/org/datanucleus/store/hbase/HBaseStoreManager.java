@@ -48,9 +48,6 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
     private boolean autoCreateTables = false;
     private boolean autoCreateColumns = false;
 
-    private int poolTimeBetweenEvictionRunsMillis; 
-    private int poolMinEvictableIdleTimeMillis;
-
     /**
      * Constructor.
      * @param clr ClassLoader resolver
@@ -78,20 +75,6 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
         {
             autoCreateTables = getBooleanProperty("datanucleus.autoCreateTables");
             autoCreateColumns = getBooleanProperty("datanucleus.autoCreateColumns");
-        }
-
-        // how often should the evictor run
-        poolTimeBetweenEvictionRunsMillis = getIntProperty("datanucleus.connectionPool.timeBetweenEvictionRunsMillis");
-        if (poolTimeBetweenEvictionRunsMillis == 0)
-        {
-            poolTimeBetweenEvictionRunsMillis = 15 * 1000; // default, 15 secs
-        }
-
-        // how long may a connection sit idle in the pool before it may be evicted
-        poolMinEvictableIdleTimeMillis = getIntProperty("datanucleus.connectionPool.minEvictableIdleTimeMillis");
-        if (poolMinEvictableIdleTimeMillis == 0)
-        {
-            poolMinEvictableIdleTimeMillis = 30 * 1000; // default, 30 secs
         }
 
         logConfiguration();
@@ -151,16 +134,6 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
     public boolean isAutoCreateTables()
     {
         return autoCreateTables;
-    }
-
-    public int getPoolMinEvictableIdleTimeMillis()
-    {
-        return poolMinEvictableIdleTimeMillis;
-    }
-
-    public int getPoolTimeBetweenEvictionRunsMillis()
-    {
-        return poolTimeBetweenEvictionRunsMillis;
     }
 
     /**

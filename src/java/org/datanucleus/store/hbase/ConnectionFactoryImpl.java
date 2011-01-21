@@ -36,6 +36,8 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
 
     private HBaseConnectionPool connectionPool;
 
+    private int poolMinEvictableIdleTimeMillis = 0;
+
     /**
      * Constructor.
      * @param storeMgr The context
@@ -44,8 +46,23 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
     public ConnectionFactoryImpl(StoreManager storeMgr, String resourceType)
     {
         super(storeMgr, resourceType);
+
+        // how often should the evictor run
+        int poolTimeBetweenEvictionRunsMillis = storeMgr.getIntProperty("datanucleus.connectionPool.timeBetweenEvictionRunsMillis");
+        if (poolTimeBetweenEvictionRunsMillis == 0)
+        {
+            poolTimeBetweenEvictionRunsMillis = 15 * 1000; // default, 15 secs
+        }
+
+        // how long may a connection sit idle in the pool before it may be evicted
+        poolMinEvictableIdleTimeMillis = storeMgr.getIntProperty("datanucleus.connectionPool.minEvictableIdleTimeMillis");
+        if (poolMinEvictableIdleTimeMillis == 0)
+        {
+            poolMinEvictableIdleTimeMillis = 30 * 1000; // default, 30 secs
+        }
+
         connectionPool = new HBaseConnectionPool();
-        connectionPool.setTimeBetweenEvictionRunsMillis(((HBaseStoreManager)storeMgr).getPoolTimeBetweenEvictionRunsMillis());
+        connectionPool.setTimeBetweenEvictionRunsMillis(poolTimeBetweenEvictionRunsMillis);
 
         String url = storeMgr.getConnectionURL();
         if (!url.startsWith("hbase"))
@@ -90,7 +107,7 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
         if (managedConnection == null) 
         {
             managedConnection = new HBaseManagedConnection(storeManager.getHbaseConfig());
-            managedConnection.setIdleTimeoutMills(storeManager.getPoolMinEvictableIdleTimeMillis());
+            managedConnection.setIdleTimeoutMills(poolMinEvictableIdleTimeMillis);
             connectionPool.registerConnection(managedConnection);
         }
         managedConnection.incrementReferenceCount();
