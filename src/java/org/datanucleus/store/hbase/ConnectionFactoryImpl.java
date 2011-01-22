@@ -100,7 +100,7 @@ public class ConnectionFactoryImpl extends AbstractConnectionFactory
      * @param options Any options for then creating the connection
      * @return the {@link org.datanucleus.store.connection.ManagedConnection}
      */
-    public ManagedConnection createManagedConnection(Object poolKey, Map transactionOptions)
+    public ManagedConnection createManagedConnection(Object poolKey, Map options)
     {
         HBaseStoreManager storeManager = (HBaseStoreManager) storeMgr;
         HBaseManagedConnection managedConnection = connectionPool.getPooledConnection();

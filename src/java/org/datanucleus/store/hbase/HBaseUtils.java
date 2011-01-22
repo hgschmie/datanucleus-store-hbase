@@ -105,8 +105,8 @@ public class HBaseUtils
      * <li>Otherwise takes the column name as the qualifier name when it is specified</li>
      * <li>Otherwise takes "VERSION" as the qualifier name</li>
      * </ul>
-     * @param idmd Metadata for the Identity
-     * @param absoluteFieldNumber Field number
+     * @param mmd Metadata for the owning member
+     * @param fieldNumber Member number of the embedded object
      * @return The qualifier name
      */
     public static String getQualifierName(AbstractMemberMetaData mmd, int fieldNumber)
@@ -177,7 +177,6 @@ public class HBaseUtils
      * <li>Otherwise takes "VERSION" as the qualifier name</li>
      * </ul>
      * @param idmd Metadata for the Identity
-     * @param absoluteFieldNumber Field number
      * @return The qualifier name
      */
     public static String getQualifierName(IdentityMetaData idmd)
@@ -239,8 +238,7 @@ public class HBaseUtils
      * <li>Otherwise takes the column name as the qualifier name when it is specified</li>
      * <li>Otherwise takes "VERSION" as the qualifier name</li>
      * </ul>
-     * @param acmd Metadata for the class
-     * @param absoluteFieldNumber Field number
+     * @param vermd Metadata for the version
      * @return The qualifier name
      */
     public static String getQualifierName(VersionMetaData vermd)
