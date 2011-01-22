@@ -335,7 +335,7 @@ public class HBaseUtils
      * @param validateOnly Whether to only validate for existence and flag missing schema in the log
      */
     static void createSchemaForClass(final HBaseStoreManager storeMgr, final AbstractClassMetaData acmd, 
-            final boolean autoCreateColumns, final boolean validateOnly)
+            final boolean validateOnly)
     {
         if (acmd.isEmbeddedOnly())
         {
@@ -359,7 +359,7 @@ public class HBaseUtils
                 public Object run() throws Exception
                 {
                     String tableName = HBaseUtils.getTableName(acmd);
-                    HTableDescriptor hTable;
+                    HTableDescriptor hTable = null;
                     try
                     {
                         hTable = hBaseAdmin.getTableDescriptor(tableName.getBytes());
@@ -372,7 +372,7 @@ public class HBaseUtils
                                 acmd.getFullClassName(), tableName));
                             hTable = null;
                         }
-                        else
+                        else if (storeMgr.isAutoCreateTables())
                         {
                             NucleusLogger.DATASTORE_SCHEMA.debug(LOCALISER.msg("HBase.SchemaCreate.Class",
                                 acmd.getFullClassName(), tableName));
@@ -384,7 +384,7 @@ public class HBaseUtils
                 }
             });
 
-            if (autoCreateColumns && hTable != null)
+            if (hTable != null)
             {
                 boolean modified = false;
                 String tableName = HBaseUtils.getTableName(acmd);
@@ -395,7 +395,7 @@ public class HBaseUtils
                         NucleusLogger.DATASTORE_SCHEMA.info(LOCALISER.msg("HBase.SchemaValidate.Class.Family",
                             tableName, tableName));
                     }
-                    else
+                    else if (storeMgr.isAutoCreateColumns())
                     {
                         NucleusLogger.DATASTORE_SCHEMA.debug(LOCALISER.msg("HBase.SchemaCreate.Class.Family",
                             tableName, tableName));
@@ -425,7 +425,7 @@ public class HBaseUtils
                                 NucleusLogger.DATASTORE_SCHEMA.debug(LOCALISER.msg("HBase.SchemaValidate.Class.Family",
                                     tableName, familyName));
                             }
-                            else
+                            else if (storeMgr.isAutoCreateColumns())
                             {
                                 NucleusLogger.DATASTORE_SCHEMA.debug(LOCALISER.msg("HBase.SchemaCreate.Class.Family",
                                     tableName, familyName));

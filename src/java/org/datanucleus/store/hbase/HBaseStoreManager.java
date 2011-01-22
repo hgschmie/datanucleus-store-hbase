@@ -29,6 +29,8 @@ import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.NucleusContext;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
+import org.datanucleus.metadata.ClassMetaData;
+import org.datanucleus.metadata.ClassPersistenceModifier;
 import org.datanucleus.metadata.IdentityMetaData;
 import org.datanucleus.metadata.IdentityStrategy;
 import org.datanucleus.metadata.MetaDataListener;
@@ -37,6 +39,7 @@ import org.datanucleus.metadata.TableGeneratorMetaData;
 import org.datanucleus.store.AbstractStoreManager;
 import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.NucleusConnection;
+import org.datanucleus.store.StoreData;
 import org.datanucleus.store.schema.SchemaAwareStoreManager;
 
 public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwareStoreManager
@@ -55,10 +58,6 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
     {
         super("hbase", clr, ctx, props);
 
-        // Handler for metadata
-        metadataListener = new HBaseMetaDataListener(this);
-        ctx.getMetaDataManager().registerListener(metadataListener);
-
         persistenceHandler = new HBasePersistenceHandler(this);
         hbaseConfig = new HBaseConfiguration();
 
@@ -73,7 +72,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
 
     public void close()
     {
-        nucleusContext.getMetaDataManager().deregisterListener(metadataListener);
+        /*nucleusContext.getMetaDataManager().deregisterListener(metadataListener);*/
         super.close();
     }
 
@@ -109,6 +108,42 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
     public HBaseConfiguration getHbaseConfig()
     {
         return hbaseConfig;
+    }
+
+    /* (non-Javadoc)
+     * @see org.datanucleus.store.AbstractStoreManager#addClasses(java.lang.String[], org.datanucleus.ClassLoaderResolver)
+     */
+    @Override
+    public void addClasses(String[] classNames, ClassLoaderResolver clr)
+    {
+        if (classNames == null)
+        {
+            return;
+        }
+
+        // Filter out any "simple" type classes
+        String[] filteredClassNames = 
+            getNucleusContext().getTypeManager().filterOutSupportedSecondClassNames(classNames);
+
+        // Find the ClassMetaData for these classes and all referenced by these classes
+        Iterator iter = getMetaDataManager().getReferencedClasses(filteredClassNames, clr).iterator();
+        while (iter.hasNext())
+        {
+            ClassMetaData cmd = (ClassMetaData)iter.next();
+            if (cmd.getPersistenceModifier() == ClassPersistenceModifier.PERSISTENCE_CAPABLE)
+            {
+                if (!storeDataMgr.managesClass(cmd.getFullClassName()))
+                {
+                    StoreData sd = storeDataMgr.get(cmd.getFullClassName());
+                    if (sd == null)
+                    {
+                        registerStoreData(newStoreData(cmd, clr));
+                    }
+
+                    HBaseUtils.createSchemaForClass(this, cmd, false);
+                }
+            }
+        }
     }
 
     /**
@@ -165,7 +200,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
             AbstractClassMetaData cmd = getMetaDataManager().getMetaDataForClass(className, clr);
             if (cmd != null)
             {
-                HBaseUtils.createSchemaForClass(this, cmd, autoCreateColumns, false);
+                HBaseUtils.createSchemaForClass(this, cmd, false);
             }
         }
     }
@@ -201,7 +236,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
             AbstractClassMetaData cmd = getMetaDataManager().getMetaDataForClass(className, clr);
             if (cmd != null)
             {
-                HBaseUtils.createSchemaForClass(this, cmd, autoCreateColumns, true);
+                HBaseUtils.createSchemaForClass(this, cmd, true);
             }
         }
     }
