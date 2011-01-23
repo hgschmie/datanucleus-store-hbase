@@ -100,6 +100,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
     {
         Set set = new HashSet();
         set.add("ApplicationIdentity");
+        set.add("DatastoreIdentity");
         set.add("TransactionIsolationLevel.read-committed");
         set.add("ORM");
         return set;
