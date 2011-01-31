@@ -113,12 +113,11 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     sm.toPrintableID(), sm.getInternalObjectId()));
             }
 
-            AbstractClassMetaData acmd = sm.getClassMetaData();
-            HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
+            HTable table = mconn.getHTable(HBaseUtils.getTableName(cmd));
             Put put = newPut(sm);
             Delete delete = newDelete(sm);
 
-            if (acmd.getIdentityType() == IdentityType.DATASTORE)
+            if (cmd.getIdentityType() == IdentityType.DATASTORE)
             {
                 String familyName = HBaseUtils.getFamilyName(cmd.getIdentityMetaData());
                 String columnName = HBaseUtils.getQualifierName(cmd.getIdentityMetaData());
@@ -139,11 +138,11 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 }
             }
 
-            if (acmd.hasVersionStrategy())
+            if (cmd.hasVersionStrategy())
             {
-                String familyName = HBaseUtils.getFamilyName(acmd.getVersionMetaData());
-                String columnName = HBaseUtils.getQualifierName(acmd.getVersionMetaData());
-                if (acmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
+                String familyName = HBaseUtils.getFamilyName(cmd.getVersionMetaData());
+                String columnName = HBaseUtils.getQualifierName(cmd.getVersionMetaData());
+                if (cmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
                 {
                     long versionNumber = 1;
                     sm.setTransactionalVersion(Long.valueOf(versionNumber));
@@ -152,9 +151,9 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                         NucleusLogger.DATASTORE.debug(LOCALISER.msg("HBase.Insert.ObjectPersistedWithVersion",
                             sm.toPrintableID(), sm.getInternalObjectId(), "" + versionNumber));
                     }
-                    if (acmd.getVersionMetaData().getFieldName() != null)
+                    if (cmd.getVersionMetaData().getFieldName() != null)
                     {
-                        AbstractMemberMetaData verMmd = acmd.getMetaDataForMember(acmd.getVersionMetaData().getFieldName());
+                        AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(cmd.getVersionMetaData().getFieldName());
                         Object verFieldValue = Long.valueOf(versionNumber);
                         if (verMmd.getType() == int.class || verMmd.getType() == Integer.class)
                         {
@@ -180,7 +179,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                         }
                     }
                 }
-                else if (acmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.DATE_TIME)
+                else if (cmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.DATE_TIME)
                 {
                     Date date = new Date();
                     Timestamp ts = new Timestamp(date.getTime());
@@ -190,9 +189,9 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                         NucleusLogger.DATASTORE.debug(LOCALISER.msg("HBase.Insert.ObjectPersistedWithVersion",
                             sm.toPrintableID(), sm.getInternalObjectId(), "" + ts));
                     }
-                    if (acmd.getVersionMetaData().getFieldName() != null)
+                    if (cmd.getVersionMetaData().getFieldName() != null)
                     {
-                        AbstractMemberMetaData verMmd = acmd.getMetaDataForMember(acmd.getVersionMetaData().getFieldName());
+                        AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(cmd.getVersionMetaData().getFieldName());
                         sm.replaceField(verMmd.getAbsoluteFieldNumber(), ts);
                     }
                     else
@@ -215,7 +214,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             }
 
             StoreFieldManager fm = new StoreFieldManager(sm, put, delete);
-            sm.provideFields(acmd.getAllMemberPositions(), fm);
+            sm.provideFields(cmd.getAllMemberPositions(), fm);
 
             table.put(put);
             table.close();
