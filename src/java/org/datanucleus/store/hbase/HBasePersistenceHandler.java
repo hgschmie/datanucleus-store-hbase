@@ -17,10 +17,8 @@ Contributors :
 ***********************************************************************/
 package org.datanucleus.store.hbase;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.sql.Timestamp;
 import java.util.Date;
@@ -248,7 +246,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         try
         {
             long startTime = System.currentTimeMillis();
-            AbstractClassMetaData acmd = sm.getClassMetaData();
+            AbstractClassMetaData cmd = sm.getClassMetaData();
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
             {
                 StringBuffer fieldStr = new StringBuffer();
@@ -258,84 +256,65 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     {
                         fieldStr.append(",");
                     }
-                    fieldStr.append(acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumbers[i]).getName());
+                    fieldStr.append(cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumbers[i]).getName());
                 }
                 NucleusLogger.DATASTORE_PERSIST.debug(LOCALISER.msg("HBase.Update.Start", 
                     sm.toPrintableID(), sm.getInternalObjectId(), fieldStr.toString()));
             }
 
-            HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
+            HTable table = mconn.getHTable(HBaseUtils.getTableName(cmd));
             Put put = newPut(sm);
             Delete delete = newDelete(sm); // we will ignore the delete object
-            StoreFieldManager fm = new StoreFieldManager(sm, put, delete);
-            sm.provideFields(fieldNumbers, fm);
 
-            if (acmd.hasVersionStrategy())
+            if (cmd.hasVersionStrategy())
             {
                 // Version object so calculate version to store with
                 Object currentVersion = sm.getTransactionalVersion();
-                Object nextVersion = null;
-                VersionMetaData vermd = acmd.getVersionMetaData();
-                if (acmd.getVersionMetaData().getFieldName() != null)
-                {
-                    // Version field
-                    AbstractMemberMetaData verfmd = acmd.getMetaDataForMember(vermd.getFieldName());
-                    if (currentVersion instanceof Integer)
-                    {
-                        // Cater for Integer-based versions TODO Generalise this
-                        currentVersion = Long.valueOf(((Integer)currentVersion).longValue());
-                    }
+                VersionMetaData vermd = cmd.getVersionMetaData();
+                Object nextVersion = vermd.getNextVersion(currentVersion);
+                sm.setTransactionalVersion(nextVersion);
 
-                    nextVersion = acmd.getVersionMetaData().getNextVersion(currentVersion);
-                    if (verfmd.getType() == Integer.class || verfmd.getType() == int.class)
-                    {
-                        // Cater for Integer-based versions TODO Generalise this
-                        nextVersion = Integer.valueOf(((Long)nextVersion).intValue());
-                    }
+                if (cmd.getVersionMetaData().getFieldName() != null)
+                {
+                    // Update the field version value
+                    AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(cmd.getVersionMetaData().getFieldName());
+                    sm.replaceField(verMmd.getAbsoluteFieldNumber(), nextVersion);
                 }
                 else
                 {
-                    // Surrogate version column
-                    nextVersion = vermd.getNextVersion(currentVersion);
-                }
-
-                String familyName = HBaseUtils.getFamilyName(acmd.getVersionMetaData());
-                String columnName = HBaseUtils.getQualifierName(acmd.getVersionMetaData());
-                if (acmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
-                {
+                    // Update the stored surrogate value
+                    String familyName = HBaseUtils.getFamilyName(vermd);
+                    String columnName = HBaseUtils.getQualifierName(vermd);
                     try
                     {
                         ByteArrayOutputStream bos = new ByteArrayOutputStream();
                         ObjectOutputStream oos = new ObjectOutputStream(bos);
-                        oos.writeLong(((Long)nextVersion).longValue());
+                        if (nextVersion instanceof Long)
+                        {
+                            oos.writeLong(((Long)nextVersion).longValue());
+                        }
+                        else if (nextVersion instanceof Integer)
+                        {
+                            oos.writeInt(((Integer)nextVersion).intValue());
+                        }
+                        else
+                        {
+                            oos.writeObject(nextVersion);
+                        }
                         oos.flush();
                         put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
                         oos.close();
                         bos.close();
                     }
-                    catch (IOException e)
+                    catch (IOException ioe)
                     {
-                        throw new NucleusException(e.getMessage(), e);
-                    }
-                }
-                else if (acmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.DATE_TIME)
-                {
-                    try
-                    {
-                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                        ObjectOutputStream oos = new ObjectOutputStream(bos);
-                        oos.writeObject(nextVersion);
-                        put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                        oos.close();
-                        bos.close();
-                    }
-                    catch (IOException e)
-                    {
-                        throw new NucleusException(e.getMessage(), e);
+                        throw new NucleusException(ioe.getMessage(), ioe);
                     }
                 }
             }
 
+            StoreFieldManager fm = new StoreFieldManager(sm, put, delete);
+            sm.provideFields(fieldNumbers, fm);
             if (!put.isEmpty())
             {
                 table.put(put);
@@ -376,7 +355,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(sm.getExecutionContext());
         try
         {
-            AbstractClassMetaData acmd = sm.getClassMetaData();
+            AbstractClassMetaData cmd = sm.getClassMetaData();
             long startTime = System.currentTimeMillis();
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
             {
@@ -385,7 +364,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             }
 
             // Delete the object
-            HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
+            HTable table = mconn.getHTable(HBaseUtils.getTableName(cmd));
             table.delete(newDelete(sm));
 
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
@@ -413,7 +392,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
         HBaseManagedConnection mconn = (HBaseManagedConnection) storeMgr.getConnection(sm.getExecutionContext());
         try
         {
-            AbstractClassMetaData acmd = sm.getClassMetaData();
+            AbstractClassMetaData cmd = sm.getClassMetaData();
             if (NucleusLogger.PERSISTENCE.isDebugEnabled())
             {
                 // Debug information about what we are retrieving
@@ -426,7 +405,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     {
                         str.append(",");
                     }
-                    str.append(acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumbers[i]).getName());
+                    str.append(cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumbers[i]).getName());
                 }
                 str.append("]");
                 NucleusLogger.PERSISTENCE.debug(str);
@@ -439,50 +418,29 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     sm.toPrintableID(), sm.getInternalObjectId()));
             }
 
-            HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
+            HTable table = mconn.getHTable(HBaseUtils.getTableName(cmd));
             Result result = getResult(sm, table);
             if (result.getRow() == null)
             {
                 throw new NucleusObjectNotFoundException();
             }
             FetchFieldManager fm = new FetchFieldManager(sm, result);
-            sm.replaceFields(acmd.getAllMemberPositions(), fm);
+            sm.replaceFields(cmd.getAllMemberPositions(), fm);
 
-            if (acmd.hasVersionStrategy() && sm.getTransactionalVersion() == null)
+            if (cmd.hasVersionStrategy() && sm.getTransactionalVersion() == null)
             {
                 // No version set, so retrieve it
-                if (acmd.getVersionMetaData().getFieldName() != null)
+                if (cmd.getVersionMetaData().getFieldName() != null)
                 {
                     // Version stored in a field
                     Object datastoreVersion =
-                        sm.provideField(acmd.getAbsolutePositionOfMember(acmd.getVersionMetaData().getFieldName()));
+                        sm.provideField(cmd.getAbsolutePositionOfMember(cmd.getVersionMetaData().getFieldName()));
                     sm.setVersion(datastoreVersion);
                 }
                 else
                 {
                     // Surrogate version
-                    String familyName = HBaseUtils.getFamilyName(acmd.getVersionMetaData());
-                    String columnName = HBaseUtils.getQualifierName(acmd.getVersionMetaData());
-                    try
-                    {
-                        byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-                        ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-                        ObjectInputStream ois = new ObjectInputStream(bis);
-                        if (acmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
-                        {
-                            sm.setVersion(Long.valueOf(ois.readLong()));
-                        }
-                        else
-                        {
-                            sm.setVersion(ois.readObject());
-                        }
-                        ois.close();
-                        bis.close();
-                    }
-                    catch (Exception e)
-                    {
-                        throw new NucleusException(e.getMessage(), e);
-                    }
+                    sm.setVersion(HBaseUtils.getSurrogateVersionForObject(cmd, result));
                 }
             }
 

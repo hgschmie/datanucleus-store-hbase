@@ -118,27 +118,51 @@ class HBaseQueryUtils
 
             if (acmd.getIdentityType() == IdentityType.APPLICATION)
             {
-                while(it.hasNext())
+                while (it.hasNext())
                 {
                     final Result result = it.next();
                     Object id = IdentityUtils.getApplicationIdentityForResultSetRow(ec, acmd, null, 
                         false, new FetchFieldManager(ec, acmd, result));
-                    results.add(ec.findObject(id, 
+
+                    Object pc = ec.findObject(id, 
                         new FieldValues2()
                         {
                             public void fetchFields(ObjectProvider sm)
                             {
-                                sm.replaceFields(acmd.getAllMemberPositions(), new FetchFieldManager(ec, acmd, result));
+                                sm.replaceFields(acmd.getAllMemberPositions(), 
+                                    new FetchFieldManager(ec, acmd, result));
                             }
                             public void fetchNonLoadedFields(ObjectProvider sm)
                             {
-                                sm.replaceNonLoadedFields(acmd.getAllMemberPositions(), new FetchFieldManager(ec, acmd, result));
+                                sm.replaceNonLoadedFields(acmd.getAllMemberPositions(), 
+                                    new FetchFieldManager(ec, acmd, result));
                             }
                             public FetchPlan getFetchPlanForLoading()
                             {
                                 return null;
                             }
-                        }, null, ignoreCache));
+                        }, null, ignoreCache);
+
+                    if (acmd.hasVersionStrategy())
+                    {
+                        // Set the version on the object
+                        ObjectProvider sm = ec.findObjectProvider(pc);
+                        Object version = null;
+                        if (acmd.getVersionMetaData().getFieldName() != null)
+                        {
+                            // Set the version from the field value
+                            AbstractMemberMetaData verMmd = acmd.getMetaDataForMember(acmd.getVersionMetaData().getFieldName());
+                            version = sm.provideField(verMmd.getAbsoluteFieldNumber());
+                        }
+                        else
+                        {
+                            // Get the surrogate version from the datastore
+                            version = HBaseUtils.getSurrogateVersionForObject(acmd, result);
+                        }
+                        sm.setVersion(version);
+                    }
+
+                    results.add(pc);
                 }
             }
             else if (acmd.getIdentityType() == IdentityType.DATASTORE)
@@ -170,7 +194,8 @@ class HBaseQueryUtils
                     {
                         throw new NucleusException(e.getMessage(), e);
                     }
-                    results.add(ec.findObject(id, 
+
+                    Object pc = ec.findObject(id, 
                         new FieldValues2()
                         {
                             // StateManager calls the fetchFields method
@@ -188,7 +213,28 @@ class HBaseQueryUtils
                             {
                                 return null;
                             }
-                        }, null, ignoreCache));
+                        }, null, ignoreCache);
+
+                    if (acmd.hasVersionStrategy())
+                    {
+                        // Set the version on the object
+                        ObjectProvider sm = ec.findObjectProvider(pc);
+                        Object version = null;
+                        if (acmd.getVersionMetaData().getFieldName() != null)
+                        {
+                            // Set the version from the field value
+                            AbstractMemberMetaData verMmd = acmd.getMetaDataForMember(acmd.getVersionMetaData().getFieldName());
+                            version = sm.provideField(verMmd.getAbsoluteFieldNumber());
+                        }
+                        else
+                        {
+                            // Get the surrogate version from the datastore
+                            version = HBaseUtils.getSurrogateVersionForObject(acmd, result);
+                        }
+                        sm.setVersion(version);
+                    }
+
+                    results.add(pc);
                 }
             }
         }

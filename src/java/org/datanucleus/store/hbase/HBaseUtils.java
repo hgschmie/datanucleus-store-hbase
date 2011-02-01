@@ -19,6 +19,8 @@ Contributors :
 ***********************************************************************/
 package org.datanucleus.store.hbase;
 
+import java.io.ByteArrayInputStream;
+import java.io.ObjectInputStream;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
@@ -28,8 +30,10 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Result;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.exceptions.NucleusDataStoreException;
+import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
@@ -37,6 +41,7 @@ import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.IdentityMetaData;
 import org.datanucleus.metadata.Relation;
 import org.datanucleus.metadata.VersionMetaData;
+import org.datanucleus.metadata.VersionStrategy;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
 
@@ -561,5 +566,40 @@ public class HBaseUtils
         {
             throw new NucleusDataStoreException(e.getMessage(), e.getCause());
         }
+    }
+
+    /**
+     * Convenience method that extracts the surrogate version for a class of the specified type from
+     * the passed Result.
+     * @param cmd Metadata for the class
+     * @param result The result
+     * @return The surrogate version
+     */
+    public static Object getSurrogateVersionForObject(AbstractClassMetaData cmd, Result result)
+    {
+        String familyName = HBaseUtils.getFamilyName(cmd.getVersionMetaData());
+        String columnName = HBaseUtils.getQualifierName(cmd.getVersionMetaData());
+        Object version = null;
+        try
+        {
+            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+            ObjectInputStream ois = new ObjectInputStream(bis);
+            if (cmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
+            {
+                version = Long.valueOf(ois.readLong());
+            }
+            else
+            {
+                version = ois.readObject();
+            }
+            ois.close();
+            bis.close();
+        }
+        catch (Exception e)
+        {
+            throw new NucleusException(e.getMessage(), e);
+        }
+        return version;
     }
 }
