@@ -500,7 +500,7 @@ public class StoreEmbeddedFieldManager extends AbstractFieldManager
             {
                 ObjectStringConverter strConv = 
                     sm.getExecutionContext().getNucleusContext().getTypeManager().getStringConverter(value.getClass());
-                if (!mmd.isSerialized() && strConv != null)
+                if (!embMmd.isSerialized() && strConv != null)
                 {
                     // Persist as a String
                     String strValue = strConv.toString(value);
