@@ -52,10 +52,10 @@ public class HBaseManagedConnection extends AbstractManagedConnection
     	this.tables = new HashMap<String, HTable>();
     	disableExpirationTime();
     }
-    
+
     public Object getConnection() 
     {
-    	throw new NucleusDataStoreException("Unsopported Exception #getConnection() for " 
+    	throw new NucleusDataStoreException("Unsupported Exception #getConnection() for " 
     			+ this.getClass().getName());
     }
     

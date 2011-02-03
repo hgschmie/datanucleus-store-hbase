@@ -66,48 +66,83 @@ class HBaseQueryUtils
             Class candidateClass, boolean subclasses, boolean ignoreCache, FetchPlan fetchPlan)
     {
         List results = new ArrayList();
+
+        final ClassLoaderResolver clr = ec.getClassLoaderResolver();
+
+        final AbstractClassMetaData acmd = ec.getMetaDataManager().getMetaDataForClass(candidateClass, clr);
+        results.addAll(getObjectsOfType(ec, mconn, acmd, ignoreCache, fetchPlan));
+
+        if (subclasses)
+        {
+            // TODO Cater for inheritance here - maybe they persist all into the same table, with discriminator?
+            String[] subclassNames = ec.getMetaDataManager().getSubclassesForClass(candidateClass.getName(), true);
+            if (subclassNames != null && subclassNames.length > 0)
+            {
+                for (int i=0;i<subclassNames.length;i++)
+                {
+                    AbstractClassMetaData subcmd = ec.getMetaDataManager().getMetaDataForClass(subclassNames[i], clr);
+                    results.addAll(getObjectsOfType(ec, mconn, subcmd, ignoreCache, fetchPlan));
+                }
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * Convenience method to get all objects of the specified type.
+     * @param ec Execution Context
+     * @param mconn Managed Connection
+     * @param cmd Metadata for the type to return
+     * @param ignoreCache Whether to ignore the cache
+     * @param fetchPlan Fetch Plan
+     * @return List of objects of the candidate type
+     */
+    static private List getObjectsOfType(final ExecutionContext ec, final HBaseManagedConnection mconn,
+            final AbstractClassMetaData cmd, boolean ignoreCache, FetchPlan fetchPlan)
+    {
+        List results = new ArrayList();
         try
         {
             final ClassLoaderResolver clr = ec.getClassLoaderResolver();
-            final AbstractClassMetaData acmd = ec.getMetaDataManager().getMetaDataForClass(candidateClass,clr);
 
             Iterator<Result> it = (Iterator<Result>) AccessController.doPrivileged(new PrivilegedExceptionAction()
             {
                 public Object run() throws Exception
                 {
-                    HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
+                    HTable table = mconn.getHTable(HBaseUtils.getTableName(cmd));
 
                     // Set up to retrieve all fields, plus optional version and datastore identity columns
                     // TODO Respect FetchPlan
-                    int[] fieldNumbers =  acmd.getAllMemberPositions();
+                    int[] fieldNumbers =  cmd.getAllMemberPositions();
                     Scan scan = new Scan();
                     for (int i=0; i<fieldNumbers.length; i++)
                     {
-                        AbstractMemberMetaData mmd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumbers[i]);
+                        AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumbers[i]);
                         int relationType = mmd.getRelationType(clr);
                         if ((relationType == Relation.ONE_TO_ONE_UNI || relationType == Relation.ONE_TO_ONE_BI) && mmd.isEmbedded())
                         {
-                            addColumnsToScanForEmbeddedMember(scan, mmd, HBaseUtils.getTableName(acmd), ec);
+                            addColumnsToScanForEmbeddedMember(scan, mmd, HBaseUtils.getTableName(cmd), ec);
                         }
                         else
                         {
-                            byte[] familyName = HBaseUtils.getFamilyName(acmd, fieldNumbers[i]).getBytes();
-                            byte[] columnName = HBaseUtils.getQualifierName(acmd, fieldNumbers[i]).getBytes();
+                            byte[] familyName = HBaseUtils.getFamilyName(cmd, fieldNumbers[i]).getBytes();
+                            byte[] columnName = HBaseUtils.getQualifierName(cmd, fieldNumbers[i]).getBytes();
                             scan.addColumn(familyName, columnName);
                         }
                     }
-                    if (acmd.hasVersionStrategy() && acmd.getVersionMetaData().getFieldName() == null)
+                    if (cmd.hasVersionStrategy() && cmd.getVersionMetaData().getFieldName() == null)
                     {
                         // Add version column
-                        byte[] familyName = HBaseUtils.getFamilyName(acmd.getVersionMetaData()).getBytes();
-                        byte[] columnName = HBaseUtils.getQualifierName(acmd.getVersionMetaData()).getBytes();
+                        byte[] familyName = HBaseUtils.getFamilyName(cmd.getVersionMetaData()).getBytes();
+                        byte[] columnName = HBaseUtils.getQualifierName(cmd.getVersionMetaData()).getBytes();
                         scan.addColumn(familyName, columnName);
                     }
-                    if (acmd.getIdentityType() == IdentityType.DATASTORE)
+                    if (cmd.getIdentityType() == IdentityType.DATASTORE)
                     {
                         // Add datastore identity column
-                        byte[] familyName = HBaseUtils.getFamilyName(acmd.getIdentityMetaData()).getBytes();
-                        byte[] columnName = HBaseUtils.getQualifierName(acmd.getIdentityMetaData()).getBytes();
+                        byte[] familyName = HBaseUtils.getFamilyName(cmd.getIdentityMetaData()).getBytes();
+                        byte[] columnName = HBaseUtils.getQualifierName(cmd.getIdentityMetaData()).getBytes();
                         scan.addColumn(familyName, columnName);
                     }
                     ResultScanner scanner = table.getScanner(scan);
@@ -116,125 +151,20 @@ class HBaseQueryUtils
                 }
             });
 
-            if (acmd.getIdentityType() == IdentityType.APPLICATION)
+            if (cmd.getIdentityType() == IdentityType.APPLICATION)
             {
                 while (it.hasNext())
                 {
                     final Result result = it.next();
-                    Object id = IdentityUtils.getApplicationIdentityForResultSetRow(ec, acmd, null, 
-                        false, new FetchFieldManager(ec, acmd, result));
-
-                    Object pc = ec.findObject(id, 
-                        new FieldValues2()
-                        {
-                            public void fetchFields(ObjectProvider sm)
-                            {
-                                sm.replaceFields(acmd.getAllMemberPositions(), 
-                                    new FetchFieldManager(ec, acmd, result));
-                            }
-                            public void fetchNonLoadedFields(ObjectProvider sm)
-                            {
-                                sm.replaceNonLoadedFields(acmd.getAllMemberPositions(), 
-                                    new FetchFieldManager(ec, acmd, result));
-                            }
-                            public FetchPlan getFetchPlanForLoading()
-                            {
-                                return null;
-                            }
-                        }, null, ignoreCache);
-
-                    if (acmd.hasVersionStrategy())
-                    {
-                        // Set the version on the object
-                        ObjectProvider sm = ec.findObjectProvider(pc);
-                        Object version = null;
-                        if (acmd.getVersionMetaData().getFieldName() != null)
-                        {
-                            // Set the version from the field value
-                            AbstractMemberMetaData verMmd = acmd.getMetaDataForMember(acmd.getVersionMetaData().getFieldName());
-                            version = sm.provideField(verMmd.getAbsoluteFieldNumber());
-                        }
-                        else
-                        {
-                            // Get the surrogate version from the datastore
-                            version = HBaseUtils.getSurrogateVersionForObject(acmd, result);
-                        }
-                        sm.setVersion(version);
-                    }
-
-                    results.add(pc);
+                    results.add(getObjectUsingApplicationIdForResult(result, cmd, ec, ignoreCache));
                 }
             }
-            else if (acmd.getIdentityType() == IdentityType.DATASTORE)
+            else if (cmd.getIdentityType() == IdentityType.DATASTORE)
             {
-                String dsidFamilyName = HBaseUtils.getFamilyName(acmd.getIdentityMetaData());
-                String dsidColumnName = HBaseUtils.getQualifierName(acmd.getIdentityMetaData());
                 while (it.hasNext())
                 {
                     final Result result = it.next();
-                    OID id = null;
-                    try
-                    {
-                        byte[] bytes = result.getValue(dsidFamilyName.getBytes(), dsidColumnName.getBytes());
-                        if (bytes != null)
-                        {
-                            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-                            ObjectInputStream ois = new ObjectInputStream(bis);
-                            Object key = ois.readObject();
-                            id = OIDFactory.getInstance(ec.getNucleusContext(), acmd.getFullClassName(), key);
-                            ois.close();
-                            bis.close();
-                        }
-                        else
-                        {
-                            throw new NucleusException("Retrieved identity for family=" + dsidFamilyName + " column=" + dsidColumnName + " IS NULL");
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        throw new NucleusException(e.getMessage(), e);
-                    }
-
-                    Object pc = ec.findObject(id, 
-                        new FieldValues2()
-                        {
-                            // StateManager calls the fetchFields method
-                            public void fetchFields(ObjectProvider sm)
-                            {
-                                sm.replaceFields(acmd.getAllMemberPositions(), 
-                                    new FetchFieldManager(ec, acmd, result));
-                            }
-                            public void fetchNonLoadedFields(ObjectProvider sm)
-                            {
-                                sm.replaceNonLoadedFields(acmd.getAllMemberPositions(), 
-                                    new FetchFieldManager(ec, acmd, result));
-                            }
-                            public FetchPlan getFetchPlanForLoading()
-                            {
-                                return null;
-                            }
-                        }, null, ignoreCache);
-
-                    if (acmd.hasVersionStrategy())
-                    {
-                        // Set the version on the object
-                        ObjectProvider sm = ec.findObjectProvider(pc);
-                        Object version = null;
-                        if (acmd.getVersionMetaData().getFieldName() != null)
-                        {
-                            // Set the version from the field value
-                            AbstractMemberMetaData verMmd = acmd.getMetaDataForMember(acmd.getVersionMetaData().getFieldName());
-                            version = sm.provideField(verMmd.getAbsoluteFieldNumber());
-                        }
-                        else
-                        {
-                            // Get the surrogate version from the datastore
-                            version = HBaseUtils.getSurrogateVersionForObject(acmd, result);
-                        }
-                        sm.setVersion(version);
-                    }
-
-                    results.add(pc);
+                    results.add(getObjectUsingDatastoreIdForResult(result, cmd, ec, ignoreCache));
                 }
             }
         }
@@ -243,6 +173,121 @@ class HBaseQueryUtils
             throw new NucleusDataStoreException(e.getMessage(), e.getCause());
         }
         return results;
+    }
+
+    protected static Object getObjectUsingApplicationIdForResult(final Result result, final AbstractClassMetaData cmd,
+            final ExecutionContext ec, boolean ignoreCache)
+    {
+        Object id = IdentityUtils.getApplicationIdentityForResultSetRow(ec, cmd, null, false, 
+            new FetchFieldManager(ec, cmd, result));
+
+        Object pc = ec.findObject(id, 
+            new FieldValues2()
+            {
+                public void fetchFields(ObjectProvider sm)
+                {
+                    sm.replaceFields(cmd.getAllMemberPositions(), 
+                        new FetchFieldManager(ec, cmd, result));
+                }
+                public void fetchNonLoadedFields(ObjectProvider sm)
+                {
+                    sm.replaceNonLoadedFields(cmd.getAllMemberPositions(), 
+                        new FetchFieldManager(ec, cmd, result));
+                }
+                public FetchPlan getFetchPlanForLoading()
+                {
+                    return null;
+                }
+            }, null, ignoreCache);
+
+        if (cmd.hasVersionStrategy())
+        {
+            // Set the version on the object
+            ObjectProvider sm = ec.findObjectProvider(pc);
+            Object version = null;
+            if (cmd.getVersionMetaData().getFieldName() != null)
+            {
+                // Set the version from the field value
+                AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(cmd.getVersionMetaData().getFieldName());
+                version = sm.provideField(verMmd.getAbsoluteFieldNumber());
+            }
+            else
+            {
+                // Get the surrogate version from the datastore
+                version = HBaseUtils.getSurrogateVersionForObject(cmd, result);
+            }
+            sm.setVersion(version);
+        }
+
+        return pc;
+    }
+
+    protected static Object getObjectUsingDatastoreIdForResult(final Result result, final AbstractClassMetaData cmd,
+            final ExecutionContext ec, boolean ignoreCache)
+    {
+        String dsidFamilyName = HBaseUtils.getFamilyName(cmd.getIdentityMetaData());
+        String dsidColumnName = HBaseUtils.getQualifierName(cmd.getIdentityMetaData());
+        OID id = null;
+        try
+        {
+            byte[] bytes = result.getValue(dsidFamilyName.getBytes(), dsidColumnName.getBytes());
+            if (bytes != null)
+            {
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                Object key = ois.readObject();
+                id = OIDFactory.getInstance(ec.getNucleusContext(), cmd.getFullClassName(), key);
+                ois.close();
+                bis.close();
+            }
+            else
+            {
+                throw new NucleusException("Retrieved identity for family=" + dsidFamilyName + " column=" + dsidColumnName + " IS NULL");
+            }
+        }
+        catch (Exception e)
+        {
+            throw new NucleusException(e.getMessage(), e);
+        }
+
+        Object pc = ec.findObject(id, 
+            new FieldValues2()
+            {
+                // StateManager calls the fetchFields method
+                public void fetchFields(ObjectProvider sm)
+                {
+                    sm.replaceFields(cmd.getAllMemberPositions(), new FetchFieldManager(ec, cmd, result));
+                }
+                public void fetchNonLoadedFields(ObjectProvider sm)
+                {
+                    sm.replaceNonLoadedFields(cmd.getAllMemberPositions(), new FetchFieldManager(ec, cmd, result));
+                }
+                public FetchPlan getFetchPlanForLoading()
+                {
+                    return null;
+                }
+            }, null, ignoreCache);
+
+        if (cmd.hasVersionStrategy())
+        {
+            // Set the version on the object
+            ObjectProvider sm = ec.findObjectProvider(pc);
+            Object version = null;
+            if (cmd.getVersionMetaData().getFieldName() != null)
+            {
+                // Set the version from the field value
+                AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(cmd.getVersionMetaData().getFieldName());
+                version = sm.provideField(verMmd.getAbsoluteFieldNumber());
+            }
+            else
+            {
+                // Get the surrogate version from the datastore
+                version = HBaseUtils.getSurrogateVersionForObject(cmd, result);
+            }
+            sm.setVersion(version);
+        }
+
+        return pc;
     }
 
     private static void addColumnsToScanForEmbeddedMember(Scan scan, AbstractMemberMetaData mmd, String tableName, ExecutionContext ec)

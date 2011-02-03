@@ -61,6 +61,9 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
         persistenceHandler = new HBasePersistenceHandler(this);
         hbaseConfig = new HBaseConfiguration();
 
+        metadataListener = new HBaseMetaDataListener(this);
+        nucleusContext.getMetaDataManager().registerListener(metadataListener);
+
         logConfiguration();
     }
 
@@ -72,7 +75,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
 
     public void close()
     {
-        /*nucleusContext.getMetaDataManager().deregisterListener(metadataListener);*/
+        nucleusContext.getMetaDataManager().deregisterListener(metadataListener);
         super.close();
     }
 
