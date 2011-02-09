@@ -38,6 +38,7 @@ import org.datanucleus.store.ObjectProvider;
 import org.datanucleus.store.fieldmanager.AbstractFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseUtils;
+import org.datanucleus.store.types.ObjectLongConverter;
 import org.datanucleus.store.types.ObjectStringConverter;
 import org.datanucleus.store.types.sco.SCOUtils;
 
@@ -310,7 +311,7 @@ public class FetchEmbeddedFieldManager extends AbstractFieldManager
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
         AbstractMemberMetaData embMmd = mmd.getEmbeddedMetaData().getMemberMetaData()[fieldNumber];
         int relationType = embMmd.getRelationType(clr);
-        if ((relationType == Relation.ONE_TO_ONE_UNI || relationType == Relation.ONE_TO_ONE_BI) && embMmd.isEmbedded())
+        if (embMmd.isEmbedded() && Relation.isRelationSingleValued(relationType))
         {
             // Persistable object embedded into table of this object
             Class embcls = embMmd.getType();
@@ -374,8 +375,7 @@ public class FetchEmbeddedFieldManager extends AbstractFieldManager
             throw new NucleusException(e.getMessage(), e);
         }
 
-        if (relationType == Relation.ONE_TO_ONE_BI || relationType == Relation.ONE_TO_ONE_UNI ||
-            relationType == Relation.MANY_TO_ONE_BI || relationType == Relation.MANY_TO_ONE_UNI)
+        if (Relation.isRelationSingleValued(relationType))
         {
             if (embMmd.isSerialized())
             {
@@ -387,10 +387,8 @@ public class FetchEmbeddedFieldManager extends AbstractFieldManager
                 return ec.findObject(value, true, true, null);
             }
         }
-        else if (relationType == Relation.ONE_TO_MANY_UNI || relationType == Relation.ONE_TO_MANY_BI ||
-                relationType == Relation.MANY_TO_MANY_BI)
+        else if (Relation.isRelationMultiValued(relationType))
         {
-            // TODO Replace with SCO wrapper
             if (embMmd.hasCollection())
             {
                 if (embMmd.isSerialized())
@@ -415,6 +413,11 @@ public class FetchEmbeddedFieldManager extends AbstractFieldManager
                 {
                     Object elementId = idIter.next();
                     coll.add(ec.findObject(elementId, true, true, null));
+                }
+
+                if (sm != null)
+                {
+                    return sm.wrapSCOField(fieldNumber, coll, false, false, true);
                 }
                 return coll;
             }
@@ -449,14 +452,30 @@ public class FetchEmbeddedFieldManager extends AbstractFieldManager
         {
             ObjectStringConverter strConv = 
                 sm.getExecutionContext().getNucleusContext().getTypeManager().getStringConverter(value.getClass());
-            if (!embMmd.isSerialized() && strConv != null)
+            ObjectLongConverter longConv = 
+                sm.getExecutionContext().getNucleusContext().getTypeManager().getLongConverter(value.getClass());
+            Object returnValue = null;
+            if (!embMmd.isSerialized())
             {
-                // Persisted as a String, so convert back
-                String strValue = (String)value;
-                return strConv.toObject(strValue);
+                if (strConv != null)
+                {
+                    // Persisted as a String, so convert back
+                    String strValue = (String)value;
+                    returnValue = strConv.toObject(strValue);
+                }
+                if (longConv != null)
+                {
+                    // Persisted as a String, so convert back
+                    Long longValue = (Long)value;
+                    returnValue = longConv.toObject(longValue);
+                }
             }
-            // TODO Return SCO wrapper when possible
-            return value;
+
+            if (sm != null)
+            {
+                return sm.wrapSCOField(fieldNumber, returnValue, false, false, true);
+            }
+            return returnValue;
         }
     }
 }

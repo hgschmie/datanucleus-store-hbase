@@ -40,6 +40,7 @@ import org.datanucleus.store.ObjectProvider;
 import org.datanucleus.store.fieldmanager.AbstractFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseUtils;
+import org.datanucleus.store.types.ObjectLongConverter;
 import org.datanucleus.store.types.ObjectStringConverter;
 import org.datanucleus.store.types.sco.SCOUtils;
 
@@ -208,12 +209,73 @@ public class FetchFieldManager extends AbstractFieldManager
         return value;
     }
 
+    public short fetchShortField(int fieldNumber)
+    {
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        short value;
+        try
+        {
+            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+            ObjectInputStream ois = new ObjectInputStream(bis);
+            value = ois.readShort();
+            ois.close();
+            bis.close();
+        }
+        catch (IOException e)
+        {
+            throw new NucleusException(e.getMessage(), e);
+        }
+        return value;
+    }
+
+    public String fetchStringField(int fieldNumber)
+    {
+        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        AbstractMemberMetaData mmd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
+        String value;
+        try
+        {
+            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+            if (bytes != null)
+            {
+                if (mmd.isSerialized())
+                {
+                    ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                    ObjectInputStream ois = new ObjectInputStream(bis);
+                    value = (String) ois.readObject();
+                    ois.close();
+                    bis.close();
+                }
+                else
+                {
+                    value = new String(bytes);
+                }
+            }
+            else
+            {
+                return null;
+            }
+        }
+        catch (IOException e)
+        {
+            throw new NucleusException(e.getMessage(), e);
+        }
+        catch (ClassNotFoundException e)
+        {
+            throw new NucleusException(e.getMessage(), e);
+        }
+        return value;
+    }
+
     public Object fetchObjectField(int fieldNumber)
     {
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
         AbstractMemberMetaData mmd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
         int relationType = mmd.getRelationType(clr);
-        if ((relationType == Relation.ONE_TO_ONE_UNI || relationType == Relation.ONE_TO_ONE_BI) && mmd.isEmbedded())
+        if (mmd.isEmbedded() && Relation.isRelationSingleValued(relationType))
         {
             // Persistable object embedded into table of this object
             Class embcls = mmd.getType();
@@ -279,8 +341,7 @@ public class FetchFieldManager extends AbstractFieldManager
             throw new NucleusException(e.getMessage(), e);
         }
 
-        if (relationType == Relation.ONE_TO_ONE_BI || relationType == Relation.ONE_TO_ONE_UNI ||
-            relationType == Relation.MANY_TO_ONE_BI || relationType == Relation.MANY_TO_ONE_UNI)
+        if (Relation.isRelationSingleValued(relationType))
         {
             if (mmd.isSerialized())
             {
@@ -292,10 +353,8 @@ public class FetchFieldManager extends AbstractFieldManager
                 return ec.findObject(value, true, true, null);
             }
         }
-        else if (relationType == Relation.ONE_TO_MANY_UNI || relationType == Relation.ONE_TO_MANY_BI ||
-                relationType == Relation.MANY_TO_MANY_BI)
+        else if (Relation.isRelationMultiValued(relationType))
         {
-            // TODO Replace with SCO wrapper
             if (mmd.hasCollection())
             {
                 if (mmd.isSerialized())
@@ -320,6 +379,10 @@ public class FetchFieldManager extends AbstractFieldManager
                 {
                     Object elementId = idIter.next();
                     coll.add(ec.findObject(elementId, true, true, null));
+                }
+                if (sm != null)
+                {
+                    return sm.wrapSCOField(fieldNumber, coll, false, false, true);
                 }
                 return coll;
             }
@@ -354,75 +417,29 @@ public class FetchFieldManager extends AbstractFieldManager
         {
             ObjectStringConverter strConv = 
                 ec.getNucleusContext().getTypeManager().getStringConverter(value.getClass());
-            if (!mmd.isSerialized() && strConv != null)
+            ObjectLongConverter longConv = 
+                ec.getNucleusContext().getTypeManager().getLongConverter(value.getClass());
+            Object returnValue = value;
+            if (!mmd.isSerialized())
             {
-                // Persisted as a String, so convert back
-                String strValue = (String)value;
-                return strConv.toObject(strValue);
-            }
-            // TODO Return SCO wrapper when possible
-            return value;
-        }
-    }
-
-    public short fetchShortField(int fieldNumber)
-    {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
-        short value;
-        try
-        {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-            ObjectInputStream ois = new ObjectInputStream(bis);
-            value = ois.readShort();
-            ois.close();
-            bis.close();
-        }
-        catch (IOException e)
-        {
-            throw new NucleusException(e.getMessage(), e);
-        }
-        return value;
-    }
-
-    public String fetchStringField(int fieldNumber)
-    {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
-        AbstractMemberMetaData mmd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
-        String value;
-        try
-        {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            if (bytes != null)
-            {
-                if (mmd.isSerialized())
+                if (strConv != null)
                 {
-                    ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-                    ObjectInputStream ois = new ObjectInputStream(bis);
-                    value = (String) ois.readObject();
-                    ois.close();
-                    bis.close();
+                    // Persisted as a String, so convert back
+                    String strValue = (String)value;
+                    returnValue = strConv.toObject(strValue);
                 }
-                else
+                else if (longConv != null)
                 {
-                    value = new String(bytes);
+                    // Persisted as a Long, so convert back
+                    Long longValue = (Long)value;
+                    returnValue = longConv.toObject(longValue);
                 }
             }
-            else
+            if (sm != null)
             {
-                return null;
+                return sm.wrapSCOField(fieldNumber, returnValue, false, false, true);
             }
+            return returnValue;
         }
-        catch (IOException e)
-        {
-            throw new NucleusException(e.getMessage(), e);
-        }
-        catch (ClassNotFoundException e)
-        {
-            throw new NucleusException(e.getMessage(), e);
-        }
-        return value;
     }
 }
