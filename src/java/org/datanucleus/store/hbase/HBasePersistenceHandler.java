@@ -26,13 +26,13 @@ import java.sql.Timestamp;
 import java.util.Date;
 
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusObjectNotFoundException;
+import org.datanucleus.exceptions.NucleusOptimisticException;
 import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.identity.OID;
 import org.datanucleus.metadata.AbstractClassMetaData;
@@ -116,8 +116,8 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             }
 
             HTable table = mconn.getHTable(HBaseUtils.getTableName(cmd));
-            Put put = newPut(sm);
-            Delete delete = newDelete(sm);
+            Put put = HBaseUtils.getPutForObject(sm);
+            Delete delete = HBaseUtils.getDeleteForObject(sm);
 
             if (cmd.getIdentityType() == IdentityType.DATASTORE)
             {
@@ -299,10 +299,21 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             }
 
             HTable table = mconn.getHTable(HBaseUtils.getTableName(cmd));
-            Put put = newPut(sm);
-            Delete delete = newDelete(sm); // we will ignore the delete object
-            // TODO Add version checks
+            if (cmd.hasVersionStrategy())
+            {
+                // Optimistic checking of version
+                Object currentVersion = sm.getTransactionalVersion();
+                Result result = HBaseUtils.getResultForObject(sm, table);
+                Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result);
+                if (!datastoreVersion.equals(currentVersion))
+                {
+                    throw new NucleusOptimisticException("Cannot update object with id " + sm.getObjectId() +
+                        " since has version=" + currentVersion + " while datastore has version=" + datastoreVersion);
+                }
+            }
 
+            Put put = HBaseUtils.getPutForObject(sm);
+            Delete delete = HBaseUtils.getDeleteForObject(sm);
             if (cmd.hasVersionStrategy())
             {
                 // Version object so calculate version to store with
@@ -400,10 +411,22 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     sm.toPrintableID(), sm.getInternalObjectId()));
             }
 
-            // Delete the object
             HTable table = mconn.getHTable(HBaseUtils.getTableName(cmd));
-            // TODO Add version checks
-            table.delete(newDelete(sm));
+            if (cmd.hasVersionStrategy())
+            {
+                // Optimistic checking of version
+                Object currentVersion = sm.getTransactionalVersion();
+                Result result = HBaseUtils.getResultForObject(sm, table);
+                Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result);
+                if (!datastoreVersion.equals(currentVersion))
+                {
+                    throw new NucleusOptimisticException("Cannot delete object with id " + sm.getObjectId() +
+                        " since has version=" + currentVersion + " while datastore has version=" + datastoreVersion);
+                }
+            }
+
+            // Delete the object
+            table.delete(HBaseUtils.getDeleteForObject(sm));
 
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
             {
@@ -457,7 +480,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             }
 
             HTable table = mconn.getHTable(HBaseUtils.getTableName(cmd));
-            Result result = getResult(sm, table);
+            Result result = HBaseUtils.getResultForObject(sm, table);
             if (result.getRow() == null)
             {
                 throw new NucleusObjectNotFoundException();
@@ -539,7 +562,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             {
                 AbstractClassMetaData acmd = sm.getClassMetaData();
                 HTable table = mconn.getHTable(HBaseUtils.getTableName(acmd));
-                if (!exists(sm, table))
+                if (!HBaseUtils.objectExistsInTable(sm, table))
                 {
                     throw new NucleusObjectNotFoundException();
                 }
@@ -554,99 +577,5 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 mconn.release();
             }
         }
-    }
-
-    private Put newPut(ObjectProvider sm) throws IOException
-    {
-        AbstractClassMetaData cmd = sm.getClassMetaData();
-        Object pkValue = null;
-        if (cmd.getIdentityType() == IdentityType.DATASTORE)
-        {
-            pkValue = ((OID)sm.getInternalObjectId()).getKeyValue();
-        }
-        else if (cmd.getIdentityType() == IdentityType.APPLICATION)
-        {
-            // TODO Support composite PKs
-            pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
-        }
-
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(bos);
-        oos.writeObject(pkValue);
-        Put batch = new Put(bos.toByteArray());
-        oos.close();
-        bos.close();
-        return batch;
-    }
-
-    private Delete newDelete(ObjectProvider sm) throws IOException
-    {
-        AbstractClassMetaData cmd = sm.getClassMetaData();
-        Object pkValue = null;
-        if (cmd.getIdentityType() == IdentityType.DATASTORE)
-        {
-            pkValue = ((OID)sm.getInternalObjectId()).getKeyValue();
-        }
-        else if (cmd.getIdentityType() == IdentityType.APPLICATION)
-        {
-            // TODO Support composite PKs
-            pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
-        }
-
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(bos);
-        oos.writeObject(pkValue);
-        Delete batch = new Delete(bos.toByteArray());
-        oos.close();
-        bos.close();
-        return batch;
-    }
-
-    private Result getResult(ObjectProvider sm, HTable table) throws IOException
-    {
-        AbstractClassMetaData cmd = sm.getClassMetaData();
-        Object pkValue = null;
-        if (cmd.getIdentityType() == IdentityType.DATASTORE)
-        {
-            pkValue = ((OID)sm.getInternalObjectId()).getKeyValue();
-        }
-        else if (cmd.getIdentityType() == IdentityType.APPLICATION)
-        {
-            // TODO Support composite PKs
-            pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
-        }
-
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(bos);
-        oos.writeObject(pkValue);
-        Get get = new Get(bos.toByteArray());
-        Result result = table.get(get);
-        oos.close();
-        bos.close();
-        return result;
-    }  
-
-    private boolean exists(ObjectProvider sm, HTable table) throws IOException
-    {
-        AbstractClassMetaData cmd = sm.getClassMetaData();
-        Object pkValue = null;
-        if (cmd.getIdentityType() == IdentityType.DATASTORE)
-        {
-            pkValue = ((OID)sm.getInternalObjectId()).getKeyValue();
-        }
-        else if (cmd.getIdentityType() == IdentityType.APPLICATION)
-        {
-            // TODO Support composite PKs
-            pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
-        }
-
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(bos);
-        oos.writeObject(pkValue);
-        Get get = new Get(bos.toByteArray());
-        boolean result = table.exists(get);
-        oos.close();
-        bos.close();
-        return result;
     }
 }

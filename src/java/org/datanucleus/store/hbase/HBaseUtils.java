@@ -20,7 +20,10 @@ Contributors :
 package org.datanucleus.store.hbase;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
@@ -29,20 +32,27 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
+import org.datanucleus.identity.OID;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
 import org.datanucleus.metadata.DiscriminatorMetaData;
 import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.IdentityMetaData;
+import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.Relation;
 import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.metadata.VersionStrategy;
+import org.datanucleus.store.ObjectProvider;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
 
@@ -632,6 +642,53 @@ public class HBaseUtils
     }
 
     /**
+     * Convenience method that extracts the version for a class of the specified type from the passed Result.
+     * @param cmd Metadata for the class
+     * @param result The result
+     * @return The version
+     */
+    public static Object getVersionForObject(AbstractClassMetaData cmd, Result result)
+    {
+        if (cmd.hasVersionStrategy())
+        {
+            if (cmd.getVersionMetaData().getFieldName() != null)
+            {
+                // Version stored in a field
+                AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(cmd.getVersionMetaData().getFieldName());
+                String familyName = HBaseUtils.getFamilyName(cmd, verMmd.getAbsoluteFieldNumber());
+                String columnName = HBaseUtils.getQualifierName(cmd, verMmd.getAbsoluteFieldNumber());
+                Object version = null;
+                try
+                {
+                    byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+                    ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                    ObjectInputStream ois = new ObjectInputStream(bis);
+                    if (cmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
+                    {
+                        version = Long.valueOf(ois.readLong());
+                    }
+                    else
+                    {
+                        version = ois.readObject();
+                    }
+                    ois.close();
+                    bis.close();
+                }
+                catch (Exception e)
+                {
+                    throw new NucleusException(e.getMessage(), e);
+                }
+                return version;
+            }
+            else
+            {
+                return getSurrogateVersionForObject(cmd, result);
+            }
+        }
+        return null;
+    }
+
+    /**
      * Convenience method that extracts the surrogate version for a class of the specified type from
      * the passed Result.
      * @param cmd Metadata for the class
@@ -694,5 +751,99 @@ public class HBaseUtils
             throw new NucleusException(e.getMessage(), e);
         }
         return discValue;
+    }
+
+    public static Put getPutForObject(ObjectProvider sm) throws IOException
+    {
+        AbstractClassMetaData cmd = sm.getClassMetaData();
+        Object pkValue = null;
+        if (cmd.getIdentityType() == IdentityType.DATASTORE)
+        {
+            pkValue = ((OID)sm.getInternalObjectId()).getKeyValue();
+        }
+        else if (cmd.getIdentityType() == IdentityType.APPLICATION)
+        {
+            // TODO Support composite PKs
+            pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
+        }
+
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(bos);
+        oos.writeObject(pkValue);
+        Put batch = new Put(bos.toByteArray());
+        oos.close();
+        bos.close();
+        return batch;
+    }
+
+    public static Delete getDeleteForObject(ObjectProvider sm) throws IOException
+    {
+        AbstractClassMetaData cmd = sm.getClassMetaData();
+        Object pkValue = null;
+        if (cmd.getIdentityType() == IdentityType.DATASTORE)
+        {
+            pkValue = ((OID)sm.getInternalObjectId()).getKeyValue();
+        }
+        else if (cmd.getIdentityType() == IdentityType.APPLICATION)
+        {
+            // TODO Support composite PKs
+            pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
+        }
+
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(bos);
+        oos.writeObject(pkValue);
+        Delete batch = new Delete(bos.toByteArray());
+        oos.close();
+        bos.close();
+        return batch;
+    }
+
+    public static Result getResultForObject(ObjectProvider sm, HTable table) throws IOException
+    {
+        AbstractClassMetaData cmd = sm.getClassMetaData();
+        Object pkValue = null;
+        if (cmd.getIdentityType() == IdentityType.DATASTORE)
+        {
+            pkValue = ((OID)sm.getInternalObjectId()).getKeyValue();
+        }
+        else if (cmd.getIdentityType() == IdentityType.APPLICATION)
+        {
+            // TODO Support composite PKs
+            pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
+        }
+
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(bos);
+        oos.writeObject(pkValue);
+        Get get = new Get(bos.toByteArray());
+        Result result = table.get(get);
+        oos.close();
+        bos.close();
+        return result;
+    }
+
+    public static boolean objectExistsInTable(ObjectProvider sm, HTable table) throws IOException
+    {
+        AbstractClassMetaData cmd = sm.getClassMetaData();
+        Object pkValue = null;
+        if (cmd.getIdentityType() == IdentityType.DATASTORE)
+        {
+            pkValue = ((OID)sm.getInternalObjectId()).getKeyValue();
+        }
+        else if (cmd.getIdentityType() == IdentityType.APPLICATION)
+        {
+            // TODO Support composite PKs
+            pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
+        }
+
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(bos);
+        oos.writeObject(pkValue);
+        Get get = new Get(bos.toByteArray());
+        boolean result = table.exists(get);
+        oos.close();
+        bos.close();
+        return result;
     }
 }
