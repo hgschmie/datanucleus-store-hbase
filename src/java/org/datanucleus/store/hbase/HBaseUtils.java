@@ -37,6 +37,7 @@ import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.ColumnMetaData;
+import org.datanucleus.metadata.DiscriminatorMetaData;
 import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.IdentityMetaData;
 import org.datanucleus.metadata.Relation;
@@ -198,6 +199,68 @@ public class HBaseUtils
         {
             // Fallback to "IDENTITY"
             columnName = "IDENTITY";
+        }
+        if (columnName.indexOf(":")>-1)
+        {
+            columnName = columnName.substring(columnName.indexOf(":")+1);
+        }
+        return columnName;
+    }
+
+    /**
+     * Accessor for the HBase family name for the discriminator of this class. 
+     * Extracts the family name using the following priorities
+     * <ul>
+     * <li>If column is specified as "a:b" then takes "a" as the family name.</li>
+     * <li>Otherwise takes table name as the family name</li>
+     * </ul>
+     * @param dismd Metadata for the discriminator
+     * @return The family name
+     */
+    public static String getFamilyName(DiscriminatorMetaData dismd)
+    {
+        String columnName = null;
+
+        // Try from the column name if specified as "a:b"
+        ColumnMetaData colmd = dismd.getColumnMetaData();
+        if (colmd != null)
+        {
+            columnName = colmd.getName();
+            if (columnName!= null && columnName.indexOf(":")>-1)
+            {
+                return columnName.substring(0,columnName.indexOf(":"));
+            }
+        }
+
+        // Fallback to table name
+        return getTableName((AbstractClassMetaData)dismd.getParent().getParent());
+    }
+
+    /**
+     * Accessor for the HBase qualifier name for this discriminator. 
+     * Extracts the qualifier name using the following priorities
+     * <ul>
+     * <li>If column is specified as "a:b" then takes "b" as the qualifier name.</li>
+     * <li>Otherwise takes the column name as the qualifier name when it is specified</li>
+     * <li>Otherwise takes "DISCRIM" as the qualifier name</li>
+     * </ul>
+     * @param dismd Metadata for the discriminator
+     * @return The qualifier name
+     */
+    public static String getQualifierName(DiscriminatorMetaData dismd)
+    {
+        String columnName = null;
+
+        // Try the column if specified
+        ColumnMetaData colmd = dismd.getColumnMetaData();
+        if (colmd != null)
+        {
+            columnName = colmd.getName();
+        }
+        if (columnName == null)
+        {
+            // Fallback to "DISCRIM"
+            columnName = "DISCRIM";
         }
         if (columnName.indexOf(":")>-1)
         {

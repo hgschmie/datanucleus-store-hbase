@@ -95,13 +95,16 @@ class HBaseQueryUtils
      * @param mconn Managed Connection
      * @param cmd Metadata for the type to return
      * @param ignoreCache Whether to ignore the cache
-     * @param fetchPlan Fetch Plan
+     * @param fp Fetch Plan
      * @return List of objects of the candidate type
      */
     static private List getObjectsOfType(final ExecutionContext ec, final HBaseManagedConnection mconn,
-            final AbstractClassMetaData cmd, boolean ignoreCache, FetchPlan fetchPlan)
+            final AbstractClassMetaData cmd, boolean ignoreCache, FetchPlan fp)
     {
         List results = new ArrayList();
+
+        fp.manageFetchPlanForClass(cmd);
+        final int[] fpMembers = fp.getFetchPlanForClass(cmd).getMemberNumbers();
         try
         {
             final ClassLoaderResolver clr = ec.getClassLoaderResolver();
@@ -111,31 +114,37 @@ class HBaseQueryUtils
                 public Object run() throws Exception
                 {
                     HTable table = mconn.getHTable(HBaseUtils.getTableName(cmd));
-
-                    // Set up to retrieve all fields, plus optional version and datastore identity columns
-                    // TODO Respect FetchPlan
-                    int[] fieldNumbers =  cmd.getAllMemberPositions();
                     Scan scan = new Scan();
-                    for (int i=0; i<fieldNumbers.length; i++)
+
+                    // Retrieve all fetch-plan fields
+                    for (int i=0; i<fpMembers.length; i++)
                     {
-                        AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumbers[i]);
+                        AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fpMembers[i]);
                         int relationType = mmd.getRelationType(clr);
-                        if ((relationType == Relation.ONE_TO_ONE_UNI || relationType == Relation.ONE_TO_ONE_BI) && mmd.isEmbedded())
+                        if (Relation.isRelationSingleValued(relationType) && mmd.isEmbedded())
                         {
                             addColumnsToScanForEmbeddedMember(scan, mmd, HBaseUtils.getTableName(cmd), ec);
                         }
                         else
                         {
-                            byte[] familyName = HBaseUtils.getFamilyName(cmd, fieldNumbers[i]).getBytes();
-                            byte[] columnName = HBaseUtils.getQualifierName(cmd, fieldNumbers[i]).getBytes();
+                            byte[] familyName = HBaseUtils.getFamilyName(cmd, fpMembers[i]).getBytes();
+                            byte[] columnName = HBaseUtils.getQualifierName(cmd, fpMembers[i]).getBytes();
                             scan.addColumn(familyName, columnName);
                         }
                     }
+
                     if (cmd.hasVersionStrategy() && cmd.getVersionMetaData().getFieldName() == null)
                     {
                         // Add version column
                         byte[] familyName = HBaseUtils.getFamilyName(cmd.getVersionMetaData()).getBytes();
                         byte[] columnName = HBaseUtils.getQualifierName(cmd.getVersionMetaData()).getBytes();
+                        scan.addColumn(familyName, columnName);
+                    }
+                    if (cmd.hasDiscriminatorStrategy())
+                    {
+                        // Add discriminator column
+                        byte[] familyName = HBaseUtils.getFamilyName(cmd.getDiscriminatorMetaData()).getBytes();
+                        byte[] columnName = HBaseUtils.getQualifierName(cmd.getDiscriminatorMetaData()).getBytes();
                         scan.addColumn(familyName, columnName);
                     }
                     if (cmd.getIdentityType() == IdentityType.DATASTORE)
@@ -145,6 +154,7 @@ class HBaseQueryUtils
                         byte[] columnName = HBaseUtils.getQualifierName(cmd.getIdentityMetaData()).getBytes();
                         scan.addColumn(familyName, columnName);
                     }
+
                     ResultScanner scanner = table.getScanner(scan);
                     Iterator<Result> it = scanner.iterator();
                     return it;
@@ -156,7 +166,7 @@ class HBaseQueryUtils
                 while (it.hasNext())
                 {
                     final Result result = it.next();
-                    results.add(getObjectUsingApplicationIdForResult(result, cmd, ec, ignoreCache));
+                    results.add(getObjectUsingApplicationIdForResult(result, cmd, ec, ignoreCache, fpMembers));
                 }
             }
             else if (cmd.getIdentityType() == IdentityType.DATASTORE)
@@ -164,7 +174,7 @@ class HBaseQueryUtils
                 while (it.hasNext())
                 {
                     final Result result = it.next();
-                    results.add(getObjectUsingDatastoreIdForResult(result, cmd, ec, ignoreCache));
+                    results.add(getObjectUsingDatastoreIdForResult(result, cmd, ec, ignoreCache, fpMembers));
                 }
             }
         }
@@ -176,8 +186,13 @@ class HBaseQueryUtils
     }
 
     protected static Object getObjectUsingApplicationIdForResult(final Result result, final AbstractClassMetaData cmd,
-            final ExecutionContext ec, boolean ignoreCache)
+            final ExecutionContext ec, boolean ignoreCache, final int[] fpMembers)
     {
+        if (cmd.hasDiscriminatorStrategy())
+        {
+            // TODO Get the class for this discriminator value
+        }
+
         Object id = IdentityUtils.getApplicationIdentityForResultSetRow(ec, cmd, null, false, 
             new FetchFieldManager(ec, cmd, result));
 
@@ -186,13 +201,11 @@ class HBaseQueryUtils
             {
                 public void fetchFields(ObjectProvider sm)
                 {
-                    sm.replaceFields(cmd.getAllMemberPositions(), 
-                        new FetchFieldManager(ec, cmd, result));
+                    sm.replaceFields(fpMembers, new FetchFieldManager(ec, cmd, result));
                 }
                 public void fetchNonLoadedFields(ObjectProvider sm)
                 {
-                    sm.replaceNonLoadedFields(cmd.getAllMemberPositions(), 
-                        new FetchFieldManager(ec, cmd, result));
+                    sm.replaceNonLoadedFields(fpMembers, new FetchFieldManager(ec, cmd, result));
                 }
                 public FetchPlan getFetchPlanForLoading()
                 {
@@ -223,8 +236,13 @@ class HBaseQueryUtils
     }
 
     protected static Object getObjectUsingDatastoreIdForResult(final Result result, final AbstractClassMetaData cmd,
-            final ExecutionContext ec, boolean ignoreCache)
+            final ExecutionContext ec, boolean ignoreCache, final int[] fpMembers)
     {
+        if (cmd.hasDiscriminatorStrategy())
+        {
+            // TODO Get the class for this discriminator value
+        }
+
         String dsidFamilyName = HBaseUtils.getFamilyName(cmd.getIdentityMetaData());
         String dsidColumnName = HBaseUtils.getQualifierName(cmd.getIdentityMetaData());
         OID id = null;
@@ -256,11 +274,11 @@ class HBaseQueryUtils
                 // StateManager calls the fetchFields method
                 public void fetchFields(ObjectProvider sm)
                 {
-                    sm.replaceFields(cmd.getAllMemberPositions(), new FetchFieldManager(ec, cmd, result));
+                    sm.replaceFields(fpMembers, new FetchFieldManager(ec, cmd, result));
                 }
                 public void fetchNonLoadedFields(ObjectProvider sm)
                 {
-                    sm.replaceNonLoadedFields(cmd.getAllMemberPositions(), new FetchFieldManager(ec, cmd, result));
+                    sm.replaceNonLoadedFields(fpMembers, new FetchFieldManager(ec, cmd, result));
                 }
                 public FetchPlan getFetchPlanForLoading()
                 {

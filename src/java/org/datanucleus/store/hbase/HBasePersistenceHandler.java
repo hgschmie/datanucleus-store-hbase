@@ -13,6 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 Contributors :
+2011 Andy Jefferson - support for datastore identity, versions, discriminators,
+                      localisation
     ...
 ***********************************************************************/
 package org.datanucleus.store.hbase;
@@ -35,6 +37,8 @@ import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.identity.OID;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
+import org.datanucleus.metadata.DiscriminatorMetaData;
+import org.datanucleus.metadata.DiscriminatorStrategy;
 import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.metadata.VersionStrategy;
@@ -125,6 +129,38 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     ByteArrayOutputStream bos = new ByteArrayOutputStream();
                     ObjectOutputStream oos = new ObjectOutputStream(bos);
                     oos.writeObject(key);
+                    oos.flush();
+                    put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                    oos.close();
+                    bos.close();
+                }
+                catch (IOException e)
+                {
+                    throw new NucleusException(e.getMessage(), e);
+                }
+            }
+
+            if (cmd.hasDiscriminatorStrategy())
+            {
+                // Add discriminator field
+                DiscriminatorMetaData discmd = cmd.getDiscriminatorMetaData();
+                Object discVal = null;
+                if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.CLASS_NAME)
+                {
+                    discVal = cmd.getFullClassName();
+                }
+                else
+                {
+                    discVal = discmd.getValue();
+                }
+                String familyName = HBaseUtils.getFamilyName(discmd);
+                String columnName = HBaseUtils.getQualifierName(discmd);
+
+                try
+                {
+                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                    ObjectOutputStream oos = new ObjectOutputStream(bos);
+                    oos.writeObject(discVal);
                     oos.flush();
                     put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
                     oos.close();
@@ -265,6 +301,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             HTable table = mconn.getHTable(HBaseUtils.getTableName(cmd));
             Put put = newPut(sm);
             Delete delete = newDelete(sm); // we will ignore the delete object
+            // TODO Add version checks
 
             if (cmd.hasVersionStrategy())
             {
@@ -365,6 +402,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
             // Delete the object
             HTable table = mconn.getHTable(HBaseUtils.getTableName(cmd));
+            // TODO Add version checks
             table.delete(newDelete(sm));
 
             if (NucleusLogger.DATASTORE_PERSIST.isDebugEnabled())
