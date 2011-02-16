@@ -462,6 +462,25 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             {
                 throw new NucleusObjectNotFoundException();
             }
+            else if (cmd.hasDiscriminatorStrategy())
+            {
+                Object discValue = HBaseUtils.getDiscriminatorForObject(cmd, result);
+                if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.CLASS_NAME)
+                {
+                    if (!cmd.getFullClassName().equals(discValue))
+                    {
+                        throw new NucleusObjectNotFoundException();
+                    }
+                }
+                else if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.VALUE_MAP)
+                {
+                    if (!cmd.getDiscriminatorValue().equals(discValue))
+                    {
+                        throw new NucleusObjectNotFoundException();
+                    }
+                }
+            }
+
             FetchFieldManager fm = new FetchFieldManager(sm, result);
             sm.replaceFields(cmd.getAllMemberPositions(), fm);
 
