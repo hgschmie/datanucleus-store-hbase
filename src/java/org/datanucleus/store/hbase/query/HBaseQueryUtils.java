@@ -39,6 +39,7 @@ import org.datanucleus.identity.OID;
 import org.datanucleus.identity.OIDFactory;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
+import org.datanucleus.metadata.DiscriminatorStrategy;
 import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.Relation;
@@ -166,7 +167,11 @@ class HBaseQueryUtils
                 while (it.hasNext())
                 {
                     final Result result = it.next();
-                    results.add(getObjectUsingApplicationIdForResult(result, cmd, ec, ignoreCache, fpMembers));
+                    Object obj = getObjectUsingApplicationIdForResult(result, cmd, ec, ignoreCache, fpMembers);
+                    if (obj != null)
+                    {
+                        results.add(obj);
+                    }
                 }
             }
             else if (cmd.getIdentityType() == IdentityType.DATASTORE)
@@ -174,7 +179,11 @@ class HBaseQueryUtils
                 while (it.hasNext())
                 {
                     final Result result = it.next();
-                    results.add(getObjectUsingDatastoreIdForResult(result, cmd, ec, ignoreCache, fpMembers));
+                    Object obj = getObjectUsingDatastoreIdForResult(result, cmd, ec, ignoreCache, fpMembers);
+                    if (obj != null)
+                    {
+                        results.add(obj);
+                    }
                 }
             }
         }
@@ -190,7 +199,22 @@ class HBaseQueryUtils
     {
         if (cmd.hasDiscriminatorStrategy())
         {
-            // TODO Get the class for this discriminator value
+            // Check the class for this discriminator value
+            Object discValue = HBaseUtils.getDiscriminatorForObject(cmd, result);
+            if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.CLASS_NAME)
+            {
+                if (!cmd.getFullClassName().equals(discValue))
+                {
+                    return null;
+                }
+            }
+            else if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.VALUE_MAP)
+            {
+                if (!cmd.getDiscriminatorValue().equals(discValue))
+                {
+                    return null;
+                }
+            }
         }
 
         Object id = IdentityUtils.getApplicationIdentityForResultSetRow(ec, cmd, null, false, 
@@ -240,7 +264,22 @@ class HBaseQueryUtils
     {
         if (cmd.hasDiscriminatorStrategy())
         {
-            // TODO Get the class for this discriminator value
+            // Check the class for this discriminator value
+            Object discValue = HBaseUtils.getDiscriminatorForObject(cmd, result);
+            if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.CLASS_NAME)
+            {
+                if (!cmd.getFullClassName().equals(discValue))
+                {
+                    return null;
+                }
+            }
+            else if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.VALUE_MAP)
+            {
+                if (!cmd.getDiscriminatorValue().equals(discValue))
+                {
+                    return null;
+                }
+            }
         }
 
         String dsidFamilyName = HBaseUtils.getFamilyName(cmd.getIdentityMetaData());

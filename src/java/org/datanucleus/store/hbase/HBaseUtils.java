@@ -665,4 +665,34 @@ public class HBaseUtils
         }
         return version;
     }
+
+    /**
+     * Convenience method that extracts the discriminator for a class of the specified type from
+     * the passed Result.
+     * @param cmd Metadata for the class
+     * @param result The result
+     * @return The discriminator
+     */
+    public static Object getDiscriminatorForObject(AbstractClassMetaData cmd, Result result)
+    {
+        String familyName = HBaseUtils.getFamilyName(cmd.getDiscriminatorMetaData());
+        String columnName = HBaseUtils.getQualifierName(cmd.getDiscriminatorMetaData());
+        Object discValue = null;
+        try
+        {
+            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+            ObjectInputStream ois = new ObjectInputStream(bis);
+
+            discValue = ois.readObject();
+
+            ois.close();
+            bis.close();
+        }
+        catch (Exception e)
+        {
+            throw new NucleusException(e.getMessage(), e);
+        }
+        return discValue;
+    }
 }
