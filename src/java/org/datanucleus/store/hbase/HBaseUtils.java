@@ -28,7 +28,7 @@ import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -421,7 +421,7 @@ public class HBaseUtils
             return;
         }
 
-        final HBaseConfiguration config = storeMgr.getHbaseConfig();
+        final Configuration config = storeMgr.getHbaseConfig();
         try
         {
             final HBaseAdmin hBaseAdmin = (HBaseAdmin) AccessController.doPrivileged(new PrivilegedExceptionAction()
@@ -593,7 +593,7 @@ public class HBaseUtils
             return;
         }
 
-        final HBaseConfiguration config = storeMgr.getHbaseConfig();
+        final Configuration config = storeMgr.getHbaseConfig();
         try
         {
             final HBaseAdmin hBaseAdmin = (HBaseAdmin) AccessController.doPrivileged(new PrivilegedExceptionAction()

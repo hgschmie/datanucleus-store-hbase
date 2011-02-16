@@ -23,7 +23,7 @@ import java.util.Map;
 
 import javax.transaction.xa.XAResource;
 
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.store.connection.AbstractManagedConnection;
@@ -34,7 +34,7 @@ import org.datanucleus.store.connection.ManagedConnectionResourceListener;
  */
 public class HBaseManagedConnection extends AbstractManagedConnection
 {
-	private HBaseConfiguration config;
+	private Configuration config;
 	
 	private Map<String, HTable> tables;
 	
@@ -46,7 +46,7 @@ public class HBaseManagedConnection extends AbstractManagedConnection
 	
 	private boolean isDisposed = false;
 	
-    public HBaseManagedConnection(HBaseConfiguration config)
+    public HBaseManagedConnection(Configuration config)
     {
     	this.config = config; 
     	this.tables = new HashMap<String, HTable>();

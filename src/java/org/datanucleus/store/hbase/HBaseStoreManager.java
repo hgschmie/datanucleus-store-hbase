@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.NucleusContext;
@@ -46,7 +47,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
 {
     MetaDataListener metadataListener;
 
-    private HBaseConfiguration hbaseConfig; 
+    private Configuration hbaseConfig; 
 
     /**
      * Constructor.
@@ -108,11 +109,11 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
         return set;
     }
 
-    public HBaseConfiguration getHbaseConfig()
+    public Configuration getHbaseConfig()
     {
         if (hbaseConfig == null)
         {
-            hbaseConfig = new HBaseConfiguration();
+            hbaseConfig = HBaseConfiguration.create();
         }
         return hbaseConfig;
     }
