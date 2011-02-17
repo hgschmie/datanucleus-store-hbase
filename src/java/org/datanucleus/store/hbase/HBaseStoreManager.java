@@ -35,6 +35,7 @@ import org.datanucleus.metadata.ClassPersistenceModifier;
 import org.datanucleus.metadata.IdentityMetaData;
 import org.datanucleus.metadata.IdentityStrategy;
 import org.datanucleus.metadata.MetaDataListener;
+import org.datanucleus.metadata.MetaDataManager;
 import org.datanucleus.metadata.SequenceMetaData;
 import org.datanucleus.metadata.TableGeneratorMetaData;
 import org.datanucleus.store.AbstractStoreManager;
@@ -61,8 +62,20 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
 
         persistenceHandler = new HBasePersistenceHandler(this);
 
+        // Add listener so we can check all metadata for unsupported features and required schema
         metadataListener = new HBaseMetaDataListener(this);
-        nucleusContext.getMetaDataManager().registerListener(metadataListener);
+        MetaDataManager mmgr = nucleusContext.getMetaDataManager();
+        mmgr.registerListener(metadataListener);
+        Collection<String> classNamesLoaded = mmgr.getClassesWithMetaData();
+        if (classNamesLoaded != null && classNamesLoaded.size() > 0)
+        {
+            Iterator<String> iter = classNamesLoaded.iterator();
+            while (iter.hasNext())
+            {
+                AbstractClassMetaData cmd = mmgr.getMetaDataForClass(iter.next(), clr);
+                metadataListener.loaded(cmd);
+            }
+        }
 
         logConfiguration();
     }
