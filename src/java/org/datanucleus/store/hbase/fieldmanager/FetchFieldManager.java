@@ -49,12 +49,12 @@ public class FetchFieldManager extends AbstractFieldManager
     Result result;
     ExecutionContext ec;
     ObjectProvider sm;
-    AbstractClassMetaData acmd;
+    AbstractClassMetaData cmd;
 
-    public FetchFieldManager(ExecutionContext ec, AbstractClassMetaData acmd, Result result)
+    public FetchFieldManager(ExecutionContext ec, AbstractClassMetaData cmd, Result result)
     {
         this.ec = ec;
-        this.acmd = acmd;
+        this.cmd = cmd;
         this.result = result;
     }
 
@@ -62,14 +62,29 @@ public class FetchFieldManager extends AbstractFieldManager
     {
         this.ec = sm.getExecutionContext();
         this.sm = sm;
-        this.acmd = sm.getClassMetaData();
+        this.cmd = sm.getClassMetaData();
         this.result = result;
+    }
+
+    protected String getFamilyName(int fieldNumber)
+    {
+        return HBaseUtils.getFamilyName(cmd, fieldNumber);
+    }
+
+    protected String getQualifierName(int fieldNumber)
+    {
+        return HBaseUtils.getQualifierName(cmd, fieldNumber);
+    }
+
+    protected AbstractMemberMetaData getMemberMetaData(int fieldNumber)
+    {
+        return cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
     }
 
     public boolean fetchBooleanField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
         boolean value;
         try
         {
@@ -89,17 +104,17 @@ public class FetchFieldManager extends AbstractFieldManager
 
     public byte fetchByteField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
         return bytes[0];
     }
 
     public char fetchCharField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
-        AbstractMemberMetaData mmd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
         char value;
         try
         {
@@ -127,8 +142,8 @@ public class FetchFieldManager extends AbstractFieldManager
 
     public double fetchDoubleField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
         double value;
         try
         {
@@ -148,8 +163,8 @@ public class FetchFieldManager extends AbstractFieldManager
 
     public float fetchFloatField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
         float value;
         try
         {
@@ -169,8 +184,8 @@ public class FetchFieldManager extends AbstractFieldManager
 
     public int fetchIntField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
         int value;
         try
         {
@@ -190,8 +205,8 @@ public class FetchFieldManager extends AbstractFieldManager
 
     public long fetchLongField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
         long value;
         try
         {
@@ -211,8 +226,8 @@ public class FetchFieldManager extends AbstractFieldManager
 
     public short fetchShortField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
         short value;
         try
         {
@@ -232,9 +247,9 @@ public class FetchFieldManager extends AbstractFieldManager
 
     public String fetchStringField(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
-        AbstractMemberMetaData mmd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
         String value;
         try
         {
@@ -273,7 +288,7 @@ public class FetchFieldManager extends AbstractFieldManager
     public Object fetchObjectField(int fieldNumber)
     {
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
-        AbstractMemberMetaData mmd = acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
+        AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
         int relationType = mmd.getRelationType(clr);
         if (mmd.isEmbedded() && Relation.isRelationSingleValued(relationType))
         {
@@ -282,7 +297,7 @@ public class FetchFieldManager extends AbstractFieldManager
             AbstractClassMetaData embcmd = ec.getMetaDataManager().getMetaDataForClass(embcls, clr);
             if (embcmd != null)
             {
-                String tableName = HBaseUtils.getTableName(acmd);
+                String tableName = HBaseUtils.getTableName(cmd);
 
                 // Check for null value (currently need all columns to return null)
                 // TODO Cater for null (use embmd.getNullIndicatorColumn/Value)
@@ -313,32 +328,12 @@ public class FetchFieldManager extends AbstractFieldManager
             throw new NucleusUserException("Field " + mmd.getFullFieldName() + " marked as embedded but no such metadata");
         }
 
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
-        Object value;
-        try
+        String familyName = HBaseUtils.getFamilyName(cmd, fieldNumber);
+        String columnName = HBaseUtils.getQualifierName(cmd, fieldNumber);
+        Object value = readObjectField(familyName, columnName, result);
+        if (value == null)
         {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            if (bytes != null)
-            {
-                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-                ObjectInputStream ois = new ObjectInputStream(bis);
-                value = ois.readObject();
-                ois.close();
-                bis.close();
-            }
-            else
-            {
-                return null;
-            }
-        }
-        catch (IOException e)
-        {
-            throw new NucleusException(e.getMessage(), e);
-        }
-        catch (ClassNotFoundException e)
-        {
-            throw new NucleusException(e.getMessage(), e);
+            return null;
         }
 
         if (Relation.isRelationSingleValued(relationType))
@@ -441,5 +436,31 @@ public class FetchFieldManager extends AbstractFieldManager
             }
             return returnValue;
         }
+    }
+
+    protected Object readObjectField(String familyName, String columnName, Result result)
+    {
+        Object value = null;
+        try
+        {
+            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+            if (bytes != null)
+            {
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                value = ois.readObject();
+                ois.close();
+                bis.close();
+            }
+        }
+        catch (IOException e)
+        {
+            throw new NucleusException(e.getMessage(), e);
+        }
+        catch (ClassNotFoundException e)
+        {
+            throw new NucleusException(e.getMessage(), e);
+        }
+        return value;
     }
 }

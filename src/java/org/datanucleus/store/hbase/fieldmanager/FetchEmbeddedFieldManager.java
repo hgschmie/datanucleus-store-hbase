@@ -33,9 +33,7 @@ import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.Relation;
-import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.ObjectProvider;
-import org.datanucleus.store.fieldmanager.AbstractFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.types.ObjectLongConverter;
@@ -45,261 +43,31 @@ import org.datanucleus.store.types.sco.SCOUtils;
 /**
  * FieldManager for the retrieval of a related embedded object (1-1 relation).
  */
-public class FetchEmbeddedFieldManager extends AbstractFieldManager
+public class FetchEmbeddedFieldManager extends FetchFieldManager
 {
-    private final AbstractMemberMetaData mmd;
-    private final Result result;
-    private final ExecutionContext ec;
-    private final ObjectProvider sm;
+    private final AbstractMemberMetaData ownerMmd;
     private final String tableName;
 
     public FetchEmbeddedFieldManager(ObjectProvider sm, Result result, AbstractMemberMetaData mmd, String tableName)
     {
-        this.result = result;
-        this.sm = sm;
-        this.ec = sm.getExecutionContext();
-        this.mmd = mmd;
+        super(sm, result);
+        this.ownerMmd = mmd;
         this.tableName = tableName;
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchBooleanField(int)
-     */
-    @Override
-    public boolean fetchBooleanField(int fieldNumber)
+    protected String getFamilyName(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(mmd, fieldNumber, tableName);
-        String columnName = HBaseUtils.getQualifierName(mmd, fieldNumber);
-        boolean value;
-        try
-        {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-            ObjectInputStream ois = new ObjectInputStream(bis);
-            value = ois.readBoolean();
-            ois.close();
-            bis.close();
-        }
-        catch (IOException e)
-        {
-            throw new NucleusException(e.getMessage(), e);
-        }
-        return value;
+        return HBaseUtils.getFamilyName(ownerMmd, fieldNumber, tableName);
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchByteField(int)
-     */
-    @Override
-    public byte fetchByteField(int fieldNumber)
+    protected String getQualifierName(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(mmd, fieldNumber, tableName);
-        String columnName = HBaseUtils.getQualifierName(mmd, fieldNumber);
-        byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-        return bytes[0];
+        return HBaseUtils.getQualifierName(ownerMmd, fieldNumber);
     }
 
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchCharField(int)
-     */
-    @Override
-    public char fetchCharField(int fieldNumber)
+    protected AbstractMemberMetaData getMemberMetaData(int fieldNumber)
     {
-        String familyName = HBaseUtils.getFamilyName(mmd, fieldNumber, tableName);
-        String columnName = HBaseUtils.getQualifierName(mmd, fieldNumber);
-        AbstractMemberMetaData embMmd = mmd.getEmbeddedMetaData().getMemberMetaData()[fieldNumber];
-        char value;
-        try
-        {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            if (embMmd.isSerialized())
-            {
-                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-                ObjectInputStream ois = new ObjectInputStream(bis);
-                value = ois.readChar();
-                ois.close();
-                bis.close();
-            }
-            else
-            {
-                String strValue = new String(bytes);
-                value = strValue.charAt(0);
-            }
-        }
-        catch (IOException e)
-        {
-            throw new NucleusException(e.getMessage(), e);
-        }
-        return value;
-    }
-
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchDoubleField(int)
-     */
-    @Override
-    public double fetchDoubleField(int fieldNumber)
-    {
-        String familyName = HBaseUtils.getFamilyName(mmd, fieldNumber, tableName);
-        String columnName = HBaseUtils.getQualifierName(mmd, fieldNumber);
-        double value;
-        try
-        {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-            ObjectInputStream ois = new ObjectInputStream(bis);
-            value = ois.readDouble();
-            ois.close();
-            bis.close();
-        }
-        catch (IOException e)
-        {
-            throw new NucleusException(e.getMessage(), e);
-        }
-        return value;
-    }
-
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchFloatField(int)
-     */
-    @Override
-    public float fetchFloatField(int fieldNumber)
-    {
-        String familyName = HBaseUtils.getFamilyName(mmd, fieldNumber, tableName);
-        String columnName = HBaseUtils.getQualifierName(mmd, fieldNumber);
-        float value;
-        try
-        {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-            ObjectInputStream ois = new ObjectInputStream(bis);
-            value = ois.readFloat();
-            ois.close();
-            bis.close();
-        }
-        catch (IOException e)
-        {
-            throw new NucleusException(e.getMessage(), e);
-        }
-        return value;
-    }
-
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchIntField(int)
-     */
-    @Override
-    public int fetchIntField(int fieldNumber)
-    {
-        String familyName = HBaseUtils.getFamilyName(mmd, fieldNumber, tableName);
-        String columnName = HBaseUtils.getQualifierName(mmd, fieldNumber);
-        int value;
-        try
-        {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-            ObjectInputStream ois = new ObjectInputStream(bis);
-            value = ois.readInt();
-            ois.close();
-            bis.close();
-        }
-        catch (IOException e)
-        {
-            throw new NucleusException(e.getMessage(), e);
-        }
-        return value;
-    }
-
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchLongField(int)
-     */
-    @Override
-    public long fetchLongField(int fieldNumber)
-    {
-        String familyName = HBaseUtils.getFamilyName(mmd, fieldNumber, tableName);
-        String columnName = HBaseUtils.getQualifierName(mmd, fieldNumber);
-        long value;
-        try
-        {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-            ObjectInputStream ois = new ObjectInputStream(bis);
-            value = ois.readLong();
-            ois.close();
-            bis.close();
-        }
-        catch (IOException e)
-        {
-            throw new NucleusException(e.getMessage(), e);
-        }
-        return value;
-    }
-
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchShortField(int)
-     */
-    @Override
-    public short fetchShortField(int fieldNumber)
-    {
-        String familyName = HBaseUtils.getFamilyName(mmd, fieldNumber, tableName);
-        String columnName = HBaseUtils.getQualifierName(mmd, fieldNumber);
-        short value;
-        try
-        {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-            ObjectInputStream ois = new ObjectInputStream(bis);
-            value = ois.readShort();
-            ois.close();
-            bis.close();
-        }
-        catch (IOException e)
-        {
-            throw new NucleusException(e.getMessage(), e);
-        }
-        return value;
-    }
-
-    /* (non-Javadoc)
-     * @see org.datanucleus.store.fieldmanager.AbstractFieldManager#fetchStringField(int)
-     */
-    @Override
-    public String fetchStringField(int fieldNumber)
-    {
-        String familyName = HBaseUtils.getFamilyName(mmd, fieldNumber, tableName);
-        String columnName = HBaseUtils.getQualifierName(mmd, fieldNumber);
-        AbstractMemberMetaData embMmd = mmd.getEmbeddedMetaData().getMemberMetaData()[fieldNumber];
-        String value;
-        try
-        {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            if (bytes != null)
-            {
-                if (embMmd.isSerialized())
-                {
-                    ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-                    ObjectInputStream ois = new ObjectInputStream(bis);
-                    value = (String) ois.readObject();
-                    ois.close();
-                    bis.close();
-                }
-                else
-                {
-                    value = new String(bytes);
-                }
-            }
-            else
-            {
-                return null;
-            }
-        }
-        catch (IOException e)
-        {
-            throw new NucleusException(e.getMessage(), e);
-        }
-        catch (ClassNotFoundException e)
-        {
-            throw new NucleusException(e.getMessage(), e);
-        }
-        return value;
+        return ownerMmd.getEmbeddedMetaData().getMemberMetaData()[fieldNumber];
     }
 
     /* (non-Javadoc)
@@ -309,7 +77,7 @@ public class FetchEmbeddedFieldManager extends AbstractFieldManager
     public Object fetchObjectField(int fieldNumber)
     {
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
-        AbstractMemberMetaData embMmd = mmd.getEmbeddedMetaData().getMemberMetaData()[fieldNumber];
+        AbstractMemberMetaData embMmd = ownerMmd.getEmbeddedMetaData().getMemberMetaData()[fieldNumber];
         int relationType = embMmd.getRelationType(clr);
         if (embMmd.isEmbedded() && Relation.isRelationSingleValued(relationType))
         {
@@ -320,13 +88,13 @@ public class FetchEmbeddedFieldManager extends AbstractFieldManager
             {
                 // Check for null value (currently need all columns to return null)
                 // TODO Cater for null using embmd.getNullIndicatorColumn etc
-                EmbeddedMetaData embmd = mmd.getEmbeddedMetaData();
+                EmbeddedMetaData embmd = ownerMmd.getEmbeddedMetaData();
                 AbstractMemberMetaData[] embmmds = embmd.getMemberMetaData();
                 boolean isNull = true;
                 for (int i=0;i<embmmds.length;i++)
                 {
-                    String familyName = HBaseUtils.getFamilyName(mmd, i, tableName);
-                    String columnName = HBaseUtils.getQualifierName(mmd, i);
+                    String familyName = HBaseUtils.getFamilyName(ownerMmd, i, tableName);
+                    String columnName = HBaseUtils.getQualifierName(ownerMmd, i);
                     if (result.getValue(familyName.getBytes(), columnName.getBytes()) != null)
                     {
                         isNull = false;
@@ -344,11 +112,11 @@ public class FetchEmbeddedFieldManager extends AbstractFieldManager
                 embSM.replaceFields(embcmd.getAllMemberPositions(), ffm);
                 return embSM.getObject();
             }
-            throw new NucleusUserException("Field " + mmd.getFullFieldName() + " marked as embedded but no such metadata");
+            throw new NucleusUserException("Field " + ownerMmd.getFullFieldName() + " marked as embedded but no such metadata");
         }
 
-        String familyName = HBaseUtils.getFamilyName(mmd, fieldNumber, tableName);
-        String columnName = HBaseUtils.getQualifierName(mmd, fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
         Object value;
         try
         {

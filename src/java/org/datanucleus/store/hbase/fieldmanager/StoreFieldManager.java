@@ -49,20 +49,35 @@ public class StoreFieldManager extends AbstractFieldManager
     ObjectProvider sm;
     Put put;
     Delete delete;
-    AbstractClassMetaData acmd;
+    AbstractClassMetaData cmd;
 
     public StoreFieldManager(ObjectProvider sm, Put put, Delete delete)
     {
         this.sm = sm;
-        this.acmd = sm.getClassMetaData();
+        this.cmd = sm.getClassMetaData();
         this.put = put;
         this.delete = delete;
     }
 
+    protected String getFamilyName(int fieldNumber)
+    {
+        return HBaseUtils.getFamilyName(cmd, fieldNumber);
+    }
+
+    protected String getQualifierName(int fieldNumber)
+    {
+        return HBaseUtils.getQualifierName(cmd, fieldNumber);
+    }
+
+    protected AbstractMemberMetaData getMemberMetaData(int fieldNumber)
+    {
+        return cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
+    }
+
     public void storeBooleanField(int fieldNumber, boolean value)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
         try
         {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -81,17 +96,16 @@ public class StoreFieldManager extends AbstractFieldManager
 
     public void storeByteField(int fieldNumber, byte value)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
         put.add(familyName.getBytes(), columnName.getBytes(), new byte[]{value});
     }
 
     public void storeCharField(int fieldNumber, char value)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
-        AbstractMemberMetaData mmd = 
-            acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
         if (mmd.isSerialized())
         {
             try
@@ -117,8 +131,8 @@ public class StoreFieldManager extends AbstractFieldManager
 
     public void storeDoubleField(int fieldNumber, double value)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
         try
         {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -137,8 +151,8 @@ public class StoreFieldManager extends AbstractFieldManager
 
     public void storeFloatField(int fieldNumber, float value)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
         try
         {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -157,8 +171,8 @@ public class StoreFieldManager extends AbstractFieldManager
 
     public void storeIntField(int fieldNumber, int value)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
         try
         {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -177,8 +191,8 @@ public class StoreFieldManager extends AbstractFieldManager
 
     public void storeLongField(int fieldNumber, long value)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
         try
         {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -197,8 +211,8 @@ public class StoreFieldManager extends AbstractFieldManager
 
     public void storeShortField(int fieldNumber, short value)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
         try
         {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -217,31 +231,18 @@ public class StoreFieldManager extends AbstractFieldManager
 
     public void storeStringField(int fieldNumber, String value)
     {
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
         if (value == null)
         {
             delete.deleteColumn(familyName.getBytes(), columnName.getBytes());
         }
         else
         {
-            AbstractMemberMetaData mmd = 
-                acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
+            AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
             if (mmd.isSerialized())
             {
-                try
-                {
-                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                    ObjectOutputStream oos = new ObjectOutputStream(bos);
-                    oos.writeObject(value);
-                    put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                    oos.close();
-                    bos.close();
-                }
-                catch (IOException e)
-                {
-                    throw new NucleusException(e.getMessage(), e);
-                }
+                writeObjectField(familyName, columnName, value);
             }
             else
             {
@@ -254,8 +255,7 @@ public class StoreFieldManager extends AbstractFieldManager
     {
         ExecutionContext ec = sm.getExecutionContext();
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
-        AbstractMemberMetaData mmd = 
-            acmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
         int relationType = mmd.getRelationType(clr);
         if (mmd.isEmbedded() && Relation.isRelationSingleValued(relationType))
         {
@@ -272,7 +272,7 @@ public class StoreFieldManager extends AbstractFieldManager
 
                 ObjectProvider embSM = ec.findObjectProviderForEmbedded(value, sm, mmd);
                 embSM.addEmbeddedOwner(sm, fieldNumber);
-                FieldManager ffm = new StoreEmbeddedFieldManager(embSM, put, delete, mmd, HBaseUtils.getTableName(acmd));
+                FieldManager ffm = new StoreEmbeddedFieldManager(embSM, put, delete, mmd, HBaseUtils.getTableName(cmd));
                 embSM.provideFields(embcmd.getAllMemberPositions(), ffm);
                 return;
             }
@@ -283,8 +283,8 @@ public class StoreFieldManager extends AbstractFieldManager
             }
         }
 
-        String familyName = HBaseUtils.getFamilyName(acmd, fieldNumber);
-        String columnName = HBaseUtils.getQualifierName(acmd, fieldNumber);
+        String familyName = getFamilyName(fieldNumber);
+        String columnName = getQualifierName(fieldNumber);
         if (value == null)
         {
             // TODO What about delete-orphans?
@@ -299,37 +299,13 @@ public class StoreFieldManager extends AbstractFieldManager
                 if (mmd.isSerialized())
                 {
                     // Persist as serialised into the column of this object
-                    try
-                    {
-                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                        ObjectOutputStream oos = new ObjectOutputStream(bos);
-                        oos.writeObject(value);
-                        put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                        oos.close();
-                        bos.close();
-                    }
-                    catch (IOException e)
-                    {
-                        throw new NucleusException(e.getMessage(), e);
-                    }
+                    writeObjectField(familyName, columnName, value);
                 }
                 else
                 {
                     // Persist identity in the column of this object
                     Object valueId = ec.getApiAdapter().getIdForObject(valuePC);
-                    try
-                    {
-                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                        ObjectOutputStream oos = new ObjectOutputStream(bos);
-                        oos.writeObject(valueId);
-                        put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                        oos.close();
-                        bos.close();
-                    }
-                    catch (IOException e)
-                    {
-                        throw new NucleusException(e.getMessage(), e);
-                    }
+                    writeObjectField(familyName, columnName, valueId);
                 }
             }
             else if (Relation.isRelationMultiValued(relationType))
@@ -351,36 +327,12 @@ public class StoreFieldManager extends AbstractFieldManager
                     if (mmd.isSerialized())
                     {
                         // Persist as serialised into the column of this object
-                        try
-                        {
-                            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                            ObjectOutputStream oos = new ObjectOutputStream(bos);
-                            oos.writeObject(value);
-                            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                            oos.close();
-                            bos.close();
-                        }
-                        catch (IOException e)
-                        {
-                            throw new NucleusException(e.getMessage(), e);
-                        }
+                        writeObjectField(familyName, columnName, value);
                     }
                     else
                     {
-                        // Persist comma-separated element key list into the column of this object
-                        try
-                        {
-                            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                            ObjectOutputStream oos = new ObjectOutputStream(bos);
-                            oos.writeObject(collIds);
-                            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                            oos.close();
-                            bos.close();
-                        }
-                        catch (IOException e)
-                        {
-                            throw new NucleusException(e.getMessage(), e);
-                        }
+                        // Persist list<ids> into the column of this object
+                        writeObjectField(familyName, columnName, collIds);
                     }
                 }
                 else if (mmd.hasMap())
@@ -404,19 +356,7 @@ public class StoreFieldManager extends AbstractFieldManager
                     if (mmd.isSerialized())
                     {
                         // Persist as serialised into the column of this object
-                        try
-                        {
-                            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                            ObjectOutputStream oos = new ObjectOutputStream(bos);
-                            oos.writeObject(value);
-                            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                            oos.close();
-                            bos.close();
-                        }
-                        catch (IOException e)
-                        {
-                            throw new NucleusException(e.getMessage(), e);
-                        }
+                        writeObjectField(familyName, columnName, value);
                     }
                     else
                     {
@@ -438,36 +378,12 @@ public class StoreFieldManager extends AbstractFieldManager
                     if (mmd.isSerialized())
                     {
                         // Persist as serialised into the column of this object
-                        try
-                        {
-                            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                            ObjectOutputStream oos = new ObjectOutputStream(bos);
-                            oos.writeObject(value);
-                            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                            oos.close();
-                            bos.close();
-                        }
-                        catch (IOException e)
-                        {
-                            throw new NucleusException(e.getMessage(), e);
-                        }
+                        writeObjectField(familyName, columnName, value);
                     }
                     else
                     {
                         // Persist list of array element ids into the column of this object
-                        try
-                        {
-                            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                            ObjectOutputStream oos = new ObjectOutputStream(bos);
-                            oos.writeObject(arrIds);
-                            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                            oos.close();
-                            bos.close();
-                        }
-                        catch (IOException e)
-                        {
-                            throw new NucleusException(e.getMessage(), e);
-                        }
+                        writeObjectField(familyName, columnName, arrIds);
                     }
                 }
             }
@@ -483,21 +399,26 @@ public class StoreFieldManager extends AbstractFieldManager
                 }
                 else
                 {
-                    try
-                    {
-                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                        ObjectOutputStream oos = new ObjectOutputStream(bos);
-                        oos.writeObject(value);
-                        put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                        oos.close();
-                        bos.close();
-                    }
-                    catch (IOException e)
-                    {
-                        throw new NucleusException(e.getMessage(), e);
-                    }
+                    writeObjectField(familyName, columnName, value);
                 }
             }
+        }
+    }
+
+    protected void writeObjectField(String familyName, String columnName, Object value)
+    {
+        try
+        {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(bos);
+            oos.writeObject(value);
+            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+            oos.close();
+            bos.close();
+        }
+        catch (IOException e)
+        {
+            throw new NucleusException(e.getMessage(), e);
         }
     }
 
@@ -510,7 +431,7 @@ public class StoreFieldManager extends AbstractFieldManager
         {
             EmbeddedMetaData embmd = mmd.getEmbeddedMetaData();
             AbstractMemberMetaData[] embmmds = embmd.getMemberMetaData();
-            String tableName = HBaseUtils.getTableName(acmd);
+            String tableName = HBaseUtils.getTableName(cmd);
             for (int i=0;i<embmmds.length;i++)
             {
                 int relationType = embmmds[i].getRelationType(clr);
