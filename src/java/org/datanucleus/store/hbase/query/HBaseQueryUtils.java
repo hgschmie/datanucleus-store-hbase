@@ -44,7 +44,7 @@ import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.Relation;
 import org.datanucleus.store.ExecutionContext;
-import org.datanucleus.store.FieldValues2;
+import org.datanucleus.store.FieldValues;
 import org.datanucleus.store.ObjectProvider;
 import org.datanucleus.store.hbase.HBaseManagedConnection;
 import org.datanucleus.store.hbase.HBaseUtils;
@@ -221,7 +221,7 @@ class HBaseQueryUtils
             new FetchFieldManager(ec, cmd, result));
 
         Object pc = ec.findObject(id, 
-            new FieldValues2()
+            new FieldValues()
             {
                 public void fetchFields(ObjectProvider sm)
                 {
@@ -308,7 +308,7 @@ class HBaseQueryUtils
         }
 
         Object pc = ec.findObject(id, 
-            new FieldValues2()
+            new FieldValues()
             {
                 // StateManager calls the fetchFields method
                 public void fetchFields(ObjectProvider sm)
