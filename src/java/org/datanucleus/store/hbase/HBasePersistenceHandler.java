@@ -46,6 +46,7 @@ import org.datanucleus.store.AbstractPersistenceHandler;
 import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.ObjectProvider;
 import org.datanucleus.store.StoreManager;
+import org.datanucleus.store.fieldmanager.DeleteFieldManager;
 import org.datanucleus.store.hbase.fieldmanager.FetchFieldManager;
 import org.datanucleus.store.hbase.fieldmanager.StoreFieldManager;
 import org.datanucleus.util.Localiser;
@@ -424,6 +425,10 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                         " since has version=" + currentVersion + " while datastore has version=" + datastoreVersion);
                 }
             }
+
+            // Invoke any cascade deletion
+            sm.loadUnloadedFields();
+            sm.provideFields(cmd.getAllMemberPositions(), new DeleteFieldManager(sm));
 
             // Delete the object
             table.delete(HBaseUtils.getDeleteForObject(sm));
