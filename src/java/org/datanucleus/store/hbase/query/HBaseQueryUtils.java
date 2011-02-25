@@ -42,6 +42,7 @@ import org.datanucleus.metadata.AbstractMemberMetaData;
 import org.datanucleus.metadata.DiscriminatorStrategy;
 import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.IdentityType;
+import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.Relation;
 import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.FieldValues;
@@ -66,25 +67,15 @@ class HBaseQueryUtils
     static List getObjectsOfCandidateType(final ExecutionContext ec, final HBaseManagedConnection mconn,
             Class candidateClass, boolean subclasses, boolean ignoreCache, FetchPlan fetchPlan)
     {
+        List<AbstractClassMetaData> cmds = 
+            MetaDataUtils.getMetaDataForCandidates(candidateClass, subclasses, ec);
+
+        Iterator<AbstractClassMetaData> cmdIter = cmds.iterator();
         List results = new ArrayList();
-
-        final ClassLoaderResolver clr = ec.getClassLoaderResolver();
-
-        final AbstractClassMetaData acmd = ec.getMetaDataManager().getMetaDataForClass(candidateClass, clr);
-        results.addAll(getObjectsOfType(ec, mconn, acmd, ignoreCache, fetchPlan));
-
-        if (subclasses)
+        while (cmdIter.hasNext())
         {
-            // TODO Cater for inheritance here - maybe they persist all into the same table, with discriminator?
-            String[] subclassNames = ec.getMetaDataManager().getSubclassesForClass(candidateClass.getName(), true);
-            if (subclassNames != null && subclassNames.length > 0)
-            {
-                for (int i=0;i<subclassNames.length;i++)
-                {
-                    AbstractClassMetaData subcmd = ec.getMetaDataManager().getMetaDataForClass(subclassNames[i], clr);
-                    results.addAll(getObjectsOfType(ec, mconn, subcmd, ignoreCache, fetchPlan));
-                }
-            }
+            AbstractClassMetaData acmd = cmdIter.next();
+            results.addAll(getObjectsOfType(ec, mconn, acmd, ignoreCache, fetchPlan));
         }
 
         return results;
