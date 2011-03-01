@@ -98,17 +98,6 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
     }
 
     /**
-     * Method defining which value-strategy to use when the user specifies "native".
-     * @param cmd Class requiring the strategy
-     * @param absFieldNumber Field of the class
-     * @return Just returns "uuid-hex".
-     */
-    protected String getStrategyForNative(AbstractClassMetaData cmd, int absFieldNumber)
-    {
-        return "uuid-hex";
-    }
-
-    /**
      * Accessor for the supported options in string form.
      * @return Supported options for this store manager
      */

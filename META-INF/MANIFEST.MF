@@ -2,9 +2,9 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Hbase Plug-in
 Bundle-SymbolicName: org.datanucleus.store.hbase;singleton:=true
-Bundle-Version: 3.0.0.m2
+Bundle-Version: 3.0.0.m3
 Bundle-Vendor: DataNucleus
-Require-Bundle: org.datanucleus;bundle-version="3.0.0.m1"
+Require-Bundle: org.datanucleus;bundle-version="3.0.0.m3"
 Import-Package: javax.transaction;resolution:=optional,
  javax.transaction.xa;resolution:=optional,
  org.apache.hadoop.conf,
