@@ -97,7 +97,6 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
                 if (embcmd != null)
                 {
                     ObjectProvider embSM = ec.findObjectProviderForEmbedded(value, sm, embMmd);
-                    embSM.addEmbeddedOwner(sm, fieldNumber);
                     FieldManager ffm = new StoreEmbeddedFieldManager(embSM, put, delete, embMmd, tableName);
                     embSM.provideFields(embcmd.getAllMemberPositions(), ffm);
                     return;

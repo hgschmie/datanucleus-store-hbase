@@ -106,8 +106,7 @@ public class FetchEmbeddedFieldManager extends FetchFieldManager
                     return null;
                 }
 
-                ObjectProvider embSM = ec.newObjectProviderForMember(embMmd, embcmd);
-                embSM.addEmbeddedOwner(sm, fieldNumber);
+                ObjectProvider embSM = ec.newObjectProviderForEmbedded(embMmd, embcmd, sm, fieldNumber);
                 FieldManager ffm = new FetchEmbeddedFieldManager(embSM, result, embMmd, tableName);
                 embSM.replaceFields(embcmd.getAllMemberPositions(), ffm);
                 return embSM.getObject();

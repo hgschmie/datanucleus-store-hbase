@@ -271,7 +271,6 @@ public class StoreFieldManager extends AbstractFieldManager
                 }
 
                 ObjectProvider embSM = ec.findObjectProviderForEmbedded(value, sm, mmd);
-                embSM.addEmbeddedOwner(sm, fieldNumber);
                 FieldManager ffm = new StoreEmbeddedFieldManager(embSM, put, delete, mmd, HBaseUtils.getTableName(cmd));
                 embSM.provideFields(embcmd.getAllMemberPositions(), ffm);
                 return;
