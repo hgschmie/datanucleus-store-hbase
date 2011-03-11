@@ -19,7 +19,6 @@ package org.datanucleus.store.hbase.query;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -99,12 +98,7 @@ public class JPQLQuery extends AbstractJPQLQuery
 
             if (type == BULK_DELETE)
             {
-                Iterator iter = results.iterator();
-                while (iter.hasNext())
-                {
-                    Object obj = iter.next();
-                    ec.deleteObjectInternal(obj);
-                }
+                ec.deleteObjects(results.toArray());
                 return Long.valueOf(results.size());
             }
             else if (type == BULK_UPDATE)
