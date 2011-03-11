@@ -103,7 +103,7 @@ public class JPQLQuery extends AbstractJPQLQuery
                 while (iter.hasNext())
                 {
                     Object obj = iter.next();
-                    ec.deleteObject(obj);
+                    ec.deleteObjectInternal(obj);
                 }
                 return Long.valueOf(results.size());
             }
