@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.Iterator;
 
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
@@ -83,21 +84,30 @@ public class FetchFieldManager extends AbstractFieldManager
 
     public boolean fetchBooleanField(int fieldNumber)
     {
+        boolean value;
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
-        boolean value;
-        try
+        byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        if (mmd.isSerialized())
         {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-            ObjectInputStream ois = new ObjectInputStream(bis);
-            value = ois.readBoolean();
-            ois.close();
-            bis.close();
+            try
+            {
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                value = ois.readBoolean();
+                ois.close();
+                bis.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
         }
-        catch (IOException e)
+        else
         {
-            throw new NucleusException(e.getMessage(), e);
+            value = Bytes.toBoolean(bytes);
         }
         return value;
     }
@@ -112,14 +122,15 @@ public class FetchFieldManager extends AbstractFieldManager
 
     public char fetchCharField(int fieldNumber)
     {
+        char value;
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
+        byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        char value;
-        try
+        if (mmd.isSerialized())
         {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            if (mmd.isSerialized())
+            try
             {
                 ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
                 ObjectInputStream ois = new ObjectInputStream(bis);
@@ -127,160 +138,203 @@ public class FetchFieldManager extends AbstractFieldManager
                 ois.close();
                 bis.close();
             }
-            else
+            catch (IOException e)
             {
-                String strValue = new String(bytes);
-                value = strValue.charAt(0);
+                throw new NucleusException(e.getMessage(), e);
             }
         }
-        catch (IOException e)
+        else
         {
-            throw new NucleusException(e.getMessage(), e);
+            String strValue = new String(bytes);
+            value = strValue.charAt(0);
         }
         return value;
     }
 
     public double fetchDoubleField(int fieldNumber)
     {
+        double value;
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
-        double value;
-        try
+        byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        if (mmd.isSerialized())
         {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-            ObjectInputStream ois = new ObjectInputStream(bis);
-            value = ois.readDouble();
-            ois.close();
-            bis.close();
+            try
+            {
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                value = ois.readDouble();
+                ois.close();
+                bis.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
         }
-        catch (IOException e)
+        else
         {
-            throw new NucleusException(e.getMessage(), e);
+            value = Bytes.toDouble(bytes);
         }
         return value;
     }
 
     public float fetchFloatField(int fieldNumber)
     {
+        float value;
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
-        float value;
-        try
+        byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        if (mmd.isSerialized())
         {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-            ObjectInputStream ois = new ObjectInputStream(bis);
-            value = ois.readFloat();
-            ois.close();
-            bis.close();
+            try
+            {
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                value = ois.readFloat();
+                ois.close();
+                bis.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
         }
-        catch (IOException e)
+        else
         {
-            throw new NucleusException(e.getMessage(), e);
+            value = Bytes.toFloat(bytes);
         }
         return value;
     }
 
     public int fetchIntField(int fieldNumber)
     {
+        int value;
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
-        int value;
-        try
+        byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        if (mmd.isSerialized())
         {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-            ObjectInputStream ois = new ObjectInputStream(bis);
-            value = ois.readInt();
-            ois.close();
-            bis.close();
+            try
+            {
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                value = ois.readInt();
+                ois.close();
+                bis.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
         }
-        catch (IOException e)
+        else
         {
-            throw new NucleusException(e.getMessage(), e);
+            value = Bytes.toInt(bytes);
         }
         return value;
     }
 
     public long fetchLongField(int fieldNumber)
     {
+        long value;
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
-        long value;
-        try
+        byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        if (mmd.isSerialized())
         {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-            ObjectInputStream ois = new ObjectInputStream(bis);
-            value = ois.readLong();
-            ois.close();
-            bis.close();
+            try
+            {
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                value = ois.readLong();
+                ois.close();
+                bis.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
         }
-        catch (IOException e)
+        else
         {
-            throw new NucleusException(e.getMessage(), e);
+            value = Bytes.toLong(bytes);
         }
         return value;
     }
 
     public short fetchShortField(int fieldNumber)
     {
+        short value;
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
-        short value;
-        try
+        byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        if (mmd.isSerialized())
         {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-            ObjectInputStream ois = new ObjectInputStream(bis);
-            value = ois.readShort();
-            ois.close();
-            bis.close();
+            try
+            {
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                value = ois.readShort();
+                ois.close();
+                bis.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
         }
-        catch (IOException e)
+        else
         {
-            throw new NucleusException(e.getMessage(), e);
+            value = Bytes.toShort(bytes);
         }
         return value;
     }
 
     public String fetchStringField(int fieldNumber)
     {
+        String value;
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
+        byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+        if (bytes == null)
+        {
+            return null;
+        }
+
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        String value;
-        try
+        if (mmd.isSerialized())
         {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            if (bytes != null)
+            try
             {
-                if (mmd.isSerialized())
-                {
-                    ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-                    ObjectInputStream ois = new ObjectInputStream(bis);
-                    value = (String) ois.readObject();
-                    ois.close();
-                    bis.close();
-                }
-                else
-                {
-                    value = new String(bytes);
-                }
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                value = (String) ois.readObject();
+                ois.close();
+                bis.close();
             }
-            else
+            catch (IOException e)
             {
-                return null;
+                throw new NucleusException(e.getMessage(), e);
+            }
+            catch (ClassNotFoundException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
             }
         }
-        catch (IOException e)
+        else
         {
-            throw new NucleusException(e.getMessage(), e);
-        }
-        catch (ClassNotFoundException e)
-        {
-            throw new NucleusException(e.getMessage(), e);
+            value = new String(bytes);
         }
         return value;
     }

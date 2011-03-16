@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusObjectNotFoundException;
@@ -167,7 +168,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             {
                 // Add discriminator field
                 DiscriminatorMetaData discmd = cmd.getDiscriminatorMetaData();
-                Object discVal = null;
+                String discVal = null;
                 if (cmd.getDiscriminatorStrategy() == DiscriminatorStrategy.CLASS_NAME)
                 {
                     discVal = cmd.getFullClassName();
@@ -179,20 +180,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 String familyName = HBaseUtils.getFamilyName(discmd);
                 String columnName = HBaseUtils.getQualifierName(discmd);
 
-                try
-                {
-                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                    ObjectOutputStream oos = new ObjectOutputStream(bos);
-                    oos.writeObject(discVal);
-                    oos.flush();
-                    put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                    oos.close();
-                    bos.close();
-                }
-                catch (IOException e)
-                {
-                    throw new NucleusException(e.getMessage(), e);
-                }
+                put.add(familyName.getBytes(), columnName.getBytes(), discVal.getBytes());
             }
 
             if (cmd.hasVersionStrategy())
@@ -220,20 +208,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     }
                     else
                     {
-                        try
-                        {
-                            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                            ObjectOutputStream oos = new ObjectOutputStream(bos);
-                            oos.writeLong(versionNumber);
-                            oos.flush();
-                            put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                            oos.close();
-                            bos.close();
-                        }
-                        catch (IOException e)
-                        {
-                            throw new NucleusException(e.getMessage(), e);
-                        }
+                        put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(versionNumber));
                     }
                 }
                 else if (cmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.DATE_TIME)
@@ -356,30 +331,17 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     // Update the stored surrogate value
                     String familyName = HBaseUtils.getFamilyName(vermd);
                     String columnName = HBaseUtils.getQualifierName(vermd);
-                    try
+                    if (nextVersion instanceof Long)
                     {
-                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                        ObjectOutputStream oos = new ObjectOutputStream(bos);
-                        if (nextVersion instanceof Long)
-                        {
-                            oos.writeLong(((Long)nextVersion).longValue());
-                        }
-                        else if (nextVersion instanceof Integer)
-                        {
-                            oos.writeInt(((Integer)nextVersion).intValue());
-                        }
-                        else
-                        {
-                            oos.writeObject(nextVersion);
-                        }
-                        oos.flush();
-                        put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                        oos.close();
-                        bos.close();
+                        put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes((Long)nextVersion));
                     }
-                    catch (IOException ioe)
+                    else if (nextVersion instanceof Integer)
                     {
-                        throw new NucleusException(ioe.getMessage(), ioe);
+                        put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes((Integer)nextVersion));
+                    }
+                    else
+                    {
+                        put.add(familyName.getBytes(), columnName.getBytes(), ((String)nextVersion).getBytes());
                     }
                 }
             }

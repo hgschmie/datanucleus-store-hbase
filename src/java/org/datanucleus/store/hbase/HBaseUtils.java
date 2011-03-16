@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
@@ -661,18 +662,18 @@ public class HBaseUtils
                 try
                 {
                     byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-                    ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-                    ObjectInputStream ois = new ObjectInputStream(bis);
                     if (cmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
                     {
-                        version = Long.valueOf(ois.readLong());
+                        version = Bytes.toLong(bytes);
                     }
                     else
                     {
+                        ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                        ObjectInputStream ois = new ObjectInputStream(bis);
                         version = ois.readObject();
+                        ois.close();
+                        bis.close();
                     }
-                    ois.close();
-                    bis.close();
                 }
                 catch (Exception e)
                 {
@@ -703,18 +704,18 @@ public class HBaseUtils
         try
         {
             byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-            ObjectInputStream ois = new ObjectInputStream(bis);
             if (cmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
             {
-                version = Long.valueOf(ois.readLong());
+                version = Bytes.toLong(bytes);
             }
             else
             {
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                ObjectInputStream ois = new ObjectInputStream(bis);
                 version = ois.readObject();
+                ois.close();
+                bis.close();
             }
-            ois.close();
-            bis.close();
         }
         catch (Exception e)
         {
@@ -734,23 +735,8 @@ public class HBaseUtils
     {
         String familyName = HBaseUtils.getFamilyName(cmd.getDiscriminatorMetaData());
         String columnName = HBaseUtils.getQualifierName(cmd.getDiscriminatorMetaData());
-        Object discValue = null;
-        try
-        {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-            ObjectInputStream ois = new ObjectInputStream(bis);
-
-            discValue = ois.readObject();
-
-            ois.close();
-            bis.close();
-        }
-        catch (Exception e)
-        {
-            throw new NucleusException(e.getMessage(), e);
-        }
-        return discValue;
+        byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+        return new String(bytes);
     }
 
     public static Put getPutForObject(ObjectProvider sm) throws IOException
