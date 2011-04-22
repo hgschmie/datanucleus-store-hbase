@@ -437,18 +437,29 @@ public class StoreFieldManager extends AbstractFieldManager
             }
             else
             {
-                ObjectStringConverter strConv = 
-                    ec.getNucleusContext().getTypeManager().getStringConverter(value.getClass());
-                if (!mmd.isSerialized() && strConv != null)
+                if (!mmd.isSerialized())
                 {
-                    // Persist as a String
-                    String strValue = strConv.toString(value);
-                    put.add(familyName.getBytes(), columnName.getBytes(), strValue.getBytes());
+                    if (Enum.class.isAssignableFrom(value.getClass()))
+                    {
+                        // Persist as a String
+                        // TODO Persist as number when requested
+                        put.add(familyName.getBytes(), columnName.getBytes(), ((Enum)value).name().getBytes());
+                        return;
+                    }
+
+                    ObjectStringConverter strConv = 
+                        ec.getNucleusContext().getTypeManager().getStringConverter(value.getClass());
+                    if (strConv != null)
+                    {
+                        // Persist as a String
+                        String strValue = strConv.toString(value);
+                        put.add(familyName.getBytes(), columnName.getBytes(), strValue.getBytes());
+                        return;
+                    }
                 }
-                else
-                {
-                    writeObjectField(familyName, columnName, value);
-                }
+
+                // Persist serialised
+                writeObjectField(familyName, columnName, value);
             }
         }
     }

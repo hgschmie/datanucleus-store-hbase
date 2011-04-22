@@ -36,7 +36,6 @@ import org.datanucleus.metadata.Relation;
 import org.datanucleus.store.ObjectProvider;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseUtils;
-import org.datanucleus.store.types.ObjectLongConverter;
 import org.datanucleus.store.types.ObjectStringConverter;
 import org.datanucleus.store.types.sco.SCOUtils;
 
@@ -217,24 +216,22 @@ public class FetchEmbeddedFieldManager extends FetchFieldManager
         }
         else
         {
-            ObjectStringConverter strConv = 
-                sm.getExecutionContext().getNucleusContext().getTypeManager().getStringConverter(value.getClass());
-            ObjectLongConverter longConv = 
-                sm.getExecutionContext().getNucleusContext().getTypeManager().getLongConverter(value.getClass());
             Object returnValue = null;
             if (!embMmd.isSerialized())
             {
+                if (Enum.class.isAssignableFrom(embMmd.getType()))
+                {
+                    // TODO Retrieve as number when requested
+                    return Enum.valueOf(embMmd.getType(), (String)value);
+                }
+
+                ObjectStringConverter strConv = 
+                    sm.getExecutionContext().getNucleusContext().getTypeManager().getStringConverter(value.getClass());
                 if (strConv != null)
                 {
                     // Persisted as a String, so convert back
                     String strValue = (String)value;
                     returnValue = strConv.toObject(strValue);
-                }
-                if (longConv != null)
-                {
-                    // Persisted as a String, so convert back
-                    Long longValue = (Long)value;
-                    returnValue = longConv.toObject(longValue);
                 }
             }
 

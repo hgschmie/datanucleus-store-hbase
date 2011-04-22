@@ -41,7 +41,6 @@ import org.datanucleus.store.ObjectProvider;
 import org.datanucleus.store.fieldmanager.AbstractFieldManager;
 import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseUtils;
-import org.datanucleus.store.types.ObjectLongConverter;
 import org.datanucleus.store.types.ObjectStringConverter;
 import org.datanucleus.store.types.sco.SCOUtils;
 
@@ -463,24 +462,23 @@ public class FetchFieldManager extends AbstractFieldManager
         }
         else
         {
-            ObjectStringConverter strConv = 
-                ec.getNucleusContext().getTypeManager().getStringConverter(value.getClass());
-            ObjectLongConverter longConv = 
-                ec.getNucleusContext().getTypeManager().getLongConverter(value.getClass());
             Object returnValue = value;
             if (!mmd.isSerialized())
             {
+                if (Enum.class.isAssignableFrom(mmd.getType()))
+                {
+                    // Persisted as a String, so convert back
+                    // TODO Retrieve as number when requested
+                    return Enum.valueOf(mmd.getType(), (String)value);
+                }
+
+                ObjectStringConverter strConv = 
+                    ec.getNucleusContext().getTypeManager().getStringConverter(value.getClass());
                 if (strConv != null)
                 {
                     // Persisted as a String, so convert back
                     String strValue = (String)value;
                     returnValue = strConv.toObject(strValue);
-                }
-                else if (longConv != null)
-                {
-                    // Persisted as a Long, so convert back
-                    Long longValue = (Long)value;
-                    returnValue = longConv.toObject(longValue);
                 }
             }
             if (sm != null)
@@ -493,27 +491,46 @@ public class FetchFieldManager extends AbstractFieldManager
 
     protected Object readObjectField(String familyName, String columnName, Result result)
     {
-        Object value = null;
+        byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+        if (bytes == null)
+        {
+            return null;
+        }
+
+        ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+        ObjectInputStream ois = null;
         try
         {
-            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            if (bytes != null)
-            {
-                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-                ObjectInputStream ois = new ObjectInputStream(bis);
-                value = ois.readObject();
-                ois.close();
-                bis.close();
-            }
+            ois = new ObjectInputStream(bis);
+            return ois.readObject();
         }
         catch (IOException e)
         {
-            throw new NucleusException(e.getMessage(), e);
+            // Failure in deserialisation, so must be persisted as String
+            // Return as a String TODO Allow persist using ObjectLongConverter as non-serialised
+            return new String(bytes);
         }
         catch (ClassNotFoundException e)
         {
             throw new NucleusException(e.getMessage(), e);
         }
-        return value;
+        finally
+        {
+            try
+            {
+                if (ois != null)
+                {
+                    ois.close();
+                }
+                if (bis != null)
+                {
+                    bis.close();
+                }
+            }
+            catch (IOException ioe)
+            {
+                throw new NucleusException(ioe.getMessage(), ioe);
+            }
+        }
     }
 }

@@ -107,8 +107,7 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
                         " specified as embedded but metadata not found for the class of type " + embMmd.getTypeName());
                 }
             }
-            else if (relationType == Relation.ONE_TO_ONE_BI || relationType == Relation.ONE_TO_ONE_UNI ||
-                relationType == Relation.MANY_TO_ONE_BI || relationType == Relation.MANY_TO_ONE_UNI)
+            else if (Relation.isRelationSingleValued(relationType))
             {
                 // PC object, so make sure it is persisted
                 Object valuePC = sm.getExecutionContext().persistObjectInternal(value, sm, fieldNumber, -1);
@@ -148,8 +147,7 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
                     }
                 }
             }
-            else if (relationType == Relation.ONE_TO_MANY_UNI || relationType == Relation.ONE_TO_MANY_BI ||
-                relationType == Relation.MANY_TO_MANY_BI)
+            else if (Relation.isRelationMultiValued(relationType))
             {
                 // Collection/Map/Array
                 if (embMmd.hasCollection())
@@ -290,6 +288,12 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
             }
             else
             {
+                if (Enum.class.isAssignableFrom(value.getClass()) && !embMmd.isSerialized())
+                {
+                    // TODO Persist as number when requested
+                    put.add(familyName.getBytes(), columnName.getBytes(), ((Enum)value).name().getBytes());
+                }
+
                 ObjectStringConverter strConv = 
                     sm.getExecutionContext().getNucleusContext().getTypeManager().getStringConverter(value.getClass());
                 if (!embMmd.isSerialized() && strConv != null)
