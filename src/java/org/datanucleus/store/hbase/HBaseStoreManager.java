@@ -218,7 +218,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
     /* (non-Javadoc)
      * @see org.datanucleus.store.schema.SchemaAwareStoreManager#deleteSchema(java.util.Set)
      */
-    public void deleteSchema(Set<String> classNames)
+    public void deleteSchema(Set<String> classNames, Properties props)
     {
         Iterator<String> classIter = classNames.iterator();
         ClassLoaderResolver clr = nucleusContext.getClassLoaderResolver(null);
@@ -236,7 +236,7 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
     /* (non-Javadoc)
      * @see org.datanucleus.store.schema.SchemaAwareStoreManager#validateSchema(java.util.Set)
      */
-    public void validateSchema(Set<String> classNames)
+    public void validateSchema(Set<String> classNames, Properties props)
     {
         Iterator<String> classIter = classNames.iterator();
         ClassLoaderResolver clr = nucleusContext.getClassLoaderResolver(null);
