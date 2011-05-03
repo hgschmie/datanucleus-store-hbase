@@ -17,11 +17,18 @@ Contributors:
 **********************************************************************/
 package org.datanucleus.store.hbase.query;
 
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.datanucleus.ClassLoaderResolver;
+import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
+import org.datanucleus.metadata.AbstractMemberMetaData;
+import org.datanucleus.metadata.Relation;
 import org.datanucleus.query.compiler.CompilationComponent;
 import org.datanucleus.query.compiler.QueryCompilation;
 import org.datanucleus.query.evaluator.AbstractExpressionEvaluator;
@@ -30,8 +37,14 @@ import org.datanucleus.query.expression.Literal;
 import org.datanucleus.query.expression.ParameterExpression;
 import org.datanucleus.query.expression.PrimaryExpression;
 import org.datanucleus.store.ExecutionContext;
+import org.datanucleus.store.hbase.HBaseUtils;
+import org.datanucleus.store.hbase.query.expression.HBaseBooleanExpression;
+import org.datanucleus.store.hbase.query.expression.HBaseExpression;
+import org.datanucleus.store.hbase.query.expression.HBaseFieldExpression;
+import org.datanucleus.store.hbase.query.expression.HBaseLiteral;
 import org.datanucleus.store.query.Query;
 import org.datanucleus.util.NucleusLogger;
+import org.datanucleus.util.StringUtils;
 
 /**
  * Class which maps a compiled (generic) query to a HBase query.
@@ -62,7 +75,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
     /** Whether the result clause is completely evaluatable in the datastore. */
     boolean resultComplete = true;
 
-    Stack stack = new Stack();
+    Stack<HBaseExpression> stack = new Stack();
 
     public QueryToHBaseMapper(QueryCompilation compilation, Map parameters, AbstractClassMetaData cmd,
             ExecutionContext ec, Query q)
@@ -132,6 +145,18 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
             {
                 NucleusLogger.QUERY.debug(">> Evaluating filter="+compilation.getExprFilter());
                 compilation.getExprFilter().evaluate(this);
+                HBaseExpression filterExpr = stack.pop();
+                if (filterExpr instanceof HBaseBooleanExpression)
+                {
+                    Filter filter = ((HBaseBooleanExpression)filterExpr).getFilter();
+                    NucleusLogger.GENERAL.info(">> filter evaluated as "+filter);
+                    scan.setFilter(filter);
+                }
+                else
+                {
+                    NucleusLogger.QUERY.error(">> invalid compilation : filter compiled to " + filterExpr);
+                    filterComplete = false;
+                }
             }
             catch (Exception e)
             {
@@ -242,8 +267,25 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
     {
         Object right = stack.pop();
         Object left = stack.pop();
-        NucleusLogger.QUERY.debug(">> HBase.eq left="+left+" right="+right);
-        // TODO Auto-generated method stub
+        if (left instanceof HBaseLiteral && right instanceof HBaseFieldExpression)
+        {
+            HBaseFieldExpression fieldExpr = (HBaseFieldExpression)right;
+            HBaseLiteral litExpr = (HBaseLiteral)left;
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
+                litExpr.getValue(), Expression.OP_EQ);
+            stack.push(hbaseExpr);
+            return hbaseExpr;
+        }
+        else if (right instanceof HBaseLiteral && left instanceof HBaseFieldExpression)
+        {
+            HBaseFieldExpression fieldExpr = (HBaseFieldExpression)left;
+            HBaseLiteral litExpr = (HBaseLiteral)right;
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
+                litExpr.getValue(), Expression.OP_EQ);
+            stack.push(hbaseExpr);
+            return hbaseExpr;
+        }
+
         return super.processEqExpression(expr);
     }
 
@@ -253,7 +295,27 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
     @Override
     protected Object processNoteqExpression(Expression expr)
     {
-        // TODO Auto-generated method stub
+        Object right = stack.pop();
+        Object left = stack.pop();
+        if (left instanceof HBaseLiteral && right instanceof HBaseFieldExpression)
+        {
+            HBaseFieldExpression fieldExpr = (HBaseFieldExpression)right;
+            HBaseLiteral litExpr = (HBaseLiteral)left;
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
+                litExpr.getValue(), Expression.OP_NOTEQ);
+            stack.push(hbaseExpr);
+            return hbaseExpr;
+        }
+        else if (right instanceof HBaseLiteral && left instanceof HBaseFieldExpression)
+        {
+            HBaseFieldExpression fieldExpr = (HBaseFieldExpression)left;
+            HBaseLiteral litExpr = (HBaseLiteral)right;
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
+                litExpr.getValue(), Expression.OP_NOTEQ);
+            stack.push(hbaseExpr);
+            return hbaseExpr;
+        }
+
         return super.processNoteqExpression(expr);
     }
 
@@ -263,7 +325,27 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
     @Override
     protected Object processGtExpression(Expression expr)
     {
-        // TODO Auto-generated method stub
+        Object right = stack.pop();
+        Object left = stack.pop();
+        if (left instanceof HBaseLiteral && right instanceof HBaseFieldExpression)
+        {
+            HBaseFieldExpression fieldExpr = (HBaseFieldExpression)right;
+            HBaseLiteral litExpr = (HBaseLiteral)left;
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
+                litExpr.getValue(), Expression.OP_LTEQ);
+            stack.push(hbaseExpr);
+            return hbaseExpr;
+        }
+        else if (right instanceof HBaseLiteral && left instanceof HBaseFieldExpression)
+        {
+            HBaseFieldExpression fieldExpr = (HBaseFieldExpression)left;
+            HBaseLiteral litExpr = (HBaseLiteral)right;
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
+                litExpr.getValue(), Expression.OP_GT);
+            stack.push(hbaseExpr);
+            return hbaseExpr;
+        }
+
         return super.processGtExpression(expr);
     }
 
@@ -273,7 +355,27 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
     @Override
     protected Object processLtExpression(Expression expr)
     {
-        // TODO Auto-generated method stub
+        Object right = stack.pop();
+        Object left = stack.pop();
+        if (left instanceof HBaseLiteral && right instanceof HBaseFieldExpression)
+        {
+            HBaseFieldExpression fieldExpr = (HBaseFieldExpression)right;
+            HBaseLiteral litExpr = (HBaseLiteral)left;
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
+                litExpr.getValue(), Expression.OP_GTEQ);
+            stack.push(hbaseExpr);
+            return hbaseExpr;
+        }
+        else if (right instanceof HBaseLiteral && left instanceof HBaseFieldExpression)
+        {
+            HBaseFieldExpression fieldExpr = (HBaseFieldExpression)left;
+            HBaseLiteral litExpr = (HBaseLiteral)right;
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
+                litExpr.getValue(), Expression.OP_LT);
+            stack.push(hbaseExpr);
+            return hbaseExpr;
+        }
+
         return super.processLtExpression(expr);
     }
 
@@ -283,7 +385,27 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
     @Override
     protected Object processGteqExpression(Expression expr)
     {
-        // TODO Auto-generated method stub
+        Object right = stack.pop();
+        Object left = stack.pop();
+        if (left instanceof HBaseLiteral && right instanceof HBaseFieldExpression)
+        {
+            HBaseFieldExpression fieldExpr = (HBaseFieldExpression)right;
+            HBaseLiteral litExpr = (HBaseLiteral)left;
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
+                litExpr.getValue(), Expression.OP_LT);
+            stack.push(hbaseExpr);
+            return hbaseExpr;
+        }
+        else if (right instanceof HBaseLiteral && left instanceof HBaseFieldExpression)
+        {
+            HBaseFieldExpression fieldExpr = (HBaseFieldExpression)left;
+            HBaseLiteral litExpr = (HBaseLiteral)right;
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
+                litExpr.getValue(), Expression.OP_GTEQ);
+            stack.push(hbaseExpr);
+            return hbaseExpr;
+        }
+
         return super.processGteqExpression(expr);
     }
 
@@ -293,7 +415,27 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
     @Override
     protected Object processLteqExpression(Expression expr)
     {
-        // TODO Auto-generated method stub
+        Object right = stack.pop();
+        Object left = stack.pop();
+        if (left instanceof HBaseLiteral && right instanceof HBaseFieldExpression)
+        {
+            HBaseFieldExpression fieldExpr = (HBaseFieldExpression)right;
+            HBaseLiteral litExpr = (HBaseLiteral)left;
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
+                litExpr.getValue(), Expression.OP_GT);
+            stack.push(hbaseExpr);
+            return hbaseExpr;
+        }
+        else if (right instanceof HBaseLiteral && left instanceof HBaseFieldExpression)
+        {
+            HBaseFieldExpression fieldExpr = (HBaseFieldExpression)left;
+            HBaseLiteral litExpr = (HBaseLiteral)right;
+            HBaseExpression hbaseExpr = new HBaseBooleanExpression(fieldExpr.getFamilyName(), fieldExpr.getColumnName(),
+                litExpr.getValue(), Expression.OP_LTEQ);
+            stack.push(hbaseExpr);
+            return hbaseExpr;
+        }
+
         return super.processLteqExpression(expr);
     }
 
@@ -303,6 +445,35 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
     @Override
     protected Object processPrimaryExpression(PrimaryExpression expr)
     {
+        Expression left = expr.getLeft();
+        if (left == null)
+        {
+            List<String> tuples = expr.getTuples();
+            String famColName = getFamilyColumnNameForPrimary(tuples);
+            if (famColName == null)
+            {
+                if (compileComponent == CompilationComponent.FILTER)
+                {
+                    filterComplete = false;
+                }
+                else if (compileComponent == CompilationComponent.RESULT)
+                {
+                    resultComplete = false;
+                }
+                NucleusLogger.QUERY.debug(">> Primary " + expr +
+                    " is not stored in this document, so unexecutable in datastore");
+            }
+            else
+            {
+                int sepPos = famColName.indexOf("###");
+                String familyName = famColName.substring(0, sepPos);
+                String columnName = famColName.substring(sepPos+3);
+                HBaseFieldExpression fieldExpr = new HBaseFieldExpression(familyName, columnName);
+                stack.push(fieldExpr);
+                return fieldExpr;
+            }
+        }
+
         // TODO Auto-generated method stub
         return super.processPrimaryExpression(expr);
     }
@@ -323,7 +494,83 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
     @Override
     protected Object processLiteral(Literal expr)
     {
-        // TODO Auto-generated method stub
+        Object litValue = expr.getLiteral();
+        if (litValue instanceof Number)
+        {
+            HBaseLiteral lit = new HBaseLiteral(litValue);
+            stack.push(lit);
+            return lit;
+        }
+        else if (litValue instanceof String)
+        {
+            HBaseLiteral lit = new HBaseLiteral(litValue);
+            stack.push(lit);
+            return lit;
+        }
+        // TODO Handle all HBase supported (literal) types
+
         return super.processLiteral(expr);
+    }
+
+    /**
+     * Convenience method to return the "{familyName}###{columnName}" in candidate for this primary.
+     * Allows for non-relation fields, and (nested) embedded PC fields - i.e all fields that are present
+     * in the table.
+     * @param tuples Tuples for the primary
+     * @return The family+column name for this primary (or null if not resolvable in this document)
+     */
+    protected String getFamilyColumnNameForPrimary(List<String> tuples)
+    {
+        if (tuples == null || tuples.size() == 0)
+        {
+            return null;
+        }
+
+        ClassLoaderResolver clr = ec.getClassLoaderResolver();
+        AbstractClassMetaData cmd = candidateCmd;
+
+        Iterator<String> iter = tuples.iterator();
+        while (iter.hasNext())
+        {
+            String name = iter.next();
+            if (name.equals(candidateAlias))
+            {
+                cmd = candidateCmd;
+            }
+            else
+            {
+                AbstractMemberMetaData mmd = cmd.getMetaDataForMember(name);
+                int relationType = mmd.getRelationType(clr);
+                if (relationType == Relation.NONE)
+                {
+                    if (iter.hasNext())
+                    {
+                        throw new NucleusUserException("Query has reference to " +
+                            StringUtils.collectionToString(tuples) + " yet " + name + " is a non-relation field!");
+                    }
+
+                    String familyName = HBaseUtils.getFamilyName(cmd, mmd.getAbsoluteFieldNumber());
+                    String columnName = HBaseUtils.getQualifierName(cmd, mmd.getAbsoluteFieldNumber());
+                    return familyName + "###" + columnName;
+                }
+                else
+                {
+                    if (compileComponent == CompilationComponent.FILTER)
+                    {
+                        filterComplete = false;
+                    }
+                    else if (compileComponent == CompilationComponent.RESULT)
+                    {
+                        resultComplete = false;
+                    }
+                    NucleusLogger.QUERY.debug("Query has reference to " +
+                        StringUtils.collectionToString(tuples) + " and " + mmd.getFullFieldName() +
+                        " is not persisted into this document, so unexecutable in the datastore");
+                    return null;
+                }
+            }
+        }
+
+        return null;
     }
 }
