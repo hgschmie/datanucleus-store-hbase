@@ -17,15 +17,31 @@ Contributors:
 **********************************************************************/
 package org.datanucleus.store.hbase.query;
 
+import org.apache.hadoop.hbase.client.Scan;
+
 /**
  * Datastore-specific (HBase) compilation information for a java query.
  */
 public class HBaseQueryCompilation
 {
     boolean filterComplete = true;
+    boolean resultComplete = true;
+
+    /** Scan defining the result and filter components (if possible). */
+    Scan scan = null;
 
     public HBaseQueryCompilation()
     {
+    }
+
+    public void setScan(Scan scan)
+    {
+        this.scan = scan;
+    }
+
+    public Scan getScan()
+    {
+        return scan;
     }
 
     public boolean isFilterComplete()
@@ -36,5 +52,15 @@ public class HBaseQueryCompilation
     public void setFilterComplete(boolean complete)
     {
         this.filterComplete = complete;
+    }
+
+    public boolean isResultComplete()
+    {
+        return resultComplete;
+    }
+
+    public void setResultComplete(boolean complete)
+    {
+        this.resultComplete = complete;
     }
 }

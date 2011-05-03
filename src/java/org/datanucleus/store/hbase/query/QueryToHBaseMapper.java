@@ -18,12 +18,17 @@ Contributors:
 package org.datanucleus.store.hbase.query;
 
 import java.util.Map;
+import java.util.Stack;
 
+import org.apache.hadoop.hbase.client.Scan;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.query.compiler.CompilationComponent;
 import org.datanucleus.query.compiler.QueryCompilation;
 import org.datanucleus.query.evaluator.AbstractExpressionEvaluator;
 import org.datanucleus.query.expression.Expression;
+import org.datanucleus.query.expression.Literal;
+import org.datanucleus.query.expression.ParameterExpression;
+import org.datanucleus.query.expression.PrimaryExpression;
 import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.query.Query;
 import org.datanucleus.util.NucleusLogger;
@@ -49,8 +54,15 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
     /** State variable for the component being compiled. */
     CompilationComponent compileComponent;
 
+    Scan scan = null;
+
     /** Whether the filter clause is completely evaluatable in the datastore. */
     boolean filterComplete = true;
+
+    /** Whether the result clause is completely evaluatable in the datastore. */
+    boolean resultComplete = true;
+
+    Stack stack = new Stack();
 
     public QueryToHBaseMapper(QueryCompilation compilation, Map parameters, AbstractClassMetaData cmd,
             ExecutionContext ec, Query q)
@@ -68,8 +80,20 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
         return filterComplete;
     }
 
+    public boolean isResultComplete()
+    {
+        return resultComplete;
+    }
+
+    public Scan getScan()
+    {
+        return scan;
+    }
+
     public void compile()
     {
+        scan = new Scan();
+
         compileFrom();
         compileFilter();
         compileResult();
@@ -106,7 +130,8 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
 
             try
             {
-                
+                NucleusLogger.QUERY.debug(">> Evaluating filter="+compilation.getExprFilter());
+                compilation.getExprFilter().evaluate(this);
             }
             catch (Exception e)
             {
@@ -187,5 +212,118 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
             }
             compileComponent = null;
         }
+    }
+
+    /* (non-Javadoc)
+     * @see org.datanucleus.query.evaluator.AbstractExpressionEvaluator#processOrExpression(org.datanucleus.query.expression.Expression)
+     */
+    @Override
+    protected Object processOrExpression(Expression expr)
+    {
+        // TODO Auto-generated method stub
+        return super.processOrExpression(expr);
+    }
+
+    /* (non-Javadoc)
+     * @see org.datanucleus.query.evaluator.AbstractExpressionEvaluator#processAndExpression(org.datanucleus.query.expression.Expression)
+     */
+    @Override
+    protected Object processAndExpression(Expression expr)
+    {
+        // TODO Auto-generated method stub
+        return super.processAndExpression(expr);
+    }
+
+    /* (non-Javadoc)
+     * @see org.datanucleus.query.evaluator.AbstractExpressionEvaluator#processEqExpression(org.datanucleus.query.expression.Expression)
+     */
+    @Override
+    protected Object processEqExpression(Expression expr)
+    {
+        Object right = stack.pop();
+        Object left = stack.pop();
+        NucleusLogger.QUERY.debug(">> HBase.eq left="+left+" right="+right);
+        // TODO Auto-generated method stub
+        return super.processEqExpression(expr);
+    }
+
+    /* (non-Javadoc)
+     * @see org.datanucleus.query.evaluator.AbstractExpressionEvaluator#processNoteqExpression(org.datanucleus.query.expression.Expression)
+     */
+    @Override
+    protected Object processNoteqExpression(Expression expr)
+    {
+        // TODO Auto-generated method stub
+        return super.processNoteqExpression(expr);
+    }
+
+    /* (non-Javadoc)
+     * @see org.datanucleus.query.evaluator.AbstractExpressionEvaluator#processGtExpression(org.datanucleus.query.expression.Expression)
+     */
+    @Override
+    protected Object processGtExpression(Expression expr)
+    {
+        // TODO Auto-generated method stub
+        return super.processGtExpression(expr);
+    }
+
+    /* (non-Javadoc)
+     * @see org.datanucleus.query.evaluator.AbstractExpressionEvaluator#processLtExpression(org.datanucleus.query.expression.Expression)
+     */
+    @Override
+    protected Object processLtExpression(Expression expr)
+    {
+        // TODO Auto-generated method stub
+        return super.processLtExpression(expr);
+    }
+
+    /* (non-Javadoc)
+     * @see org.datanucleus.query.evaluator.AbstractExpressionEvaluator#processGteqExpression(org.datanucleus.query.expression.Expression)
+     */
+    @Override
+    protected Object processGteqExpression(Expression expr)
+    {
+        // TODO Auto-generated method stub
+        return super.processGteqExpression(expr);
+    }
+
+    /* (non-Javadoc)
+     * @see org.datanucleus.query.evaluator.AbstractExpressionEvaluator#processLteqExpression(org.datanucleus.query.expression.Expression)
+     */
+    @Override
+    protected Object processLteqExpression(Expression expr)
+    {
+        // TODO Auto-generated method stub
+        return super.processLteqExpression(expr);
+    }
+
+    /* (non-Javadoc)
+     * @see org.datanucleus.query.evaluator.AbstractExpressionEvaluator#processPrimaryExpression(org.datanucleus.query.expression.PrimaryExpression)
+     */
+    @Override
+    protected Object processPrimaryExpression(PrimaryExpression expr)
+    {
+        // TODO Auto-generated method stub
+        return super.processPrimaryExpression(expr);
+    }
+
+    /* (non-Javadoc)
+     * @see org.datanucleus.query.evaluator.AbstractExpressionEvaluator#processParameterExpression(org.datanucleus.query.expression.ParameterExpression)
+     */
+    @Override
+    protected Object processParameterExpression(ParameterExpression expr)
+    {
+        // TODO Auto-generated method stub
+        return super.processParameterExpression(expr);
+    }
+
+    /* (non-Javadoc)
+     * @see org.datanucleus.query.evaluator.AbstractExpressionEvaluator#processLiteral(org.datanucleus.query.expression.Literal)
+     */
+    @Override
+    protected Object processLiteral(Literal expr)
+    {
+        // TODO Auto-generated method stub
+        return super.processLiteral(expr);
     }
 }
