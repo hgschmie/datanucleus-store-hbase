@@ -141,8 +141,11 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
     @Override
     protected Object processOrExpression(Expression expr)
     {
-        // TODO Auto-generated method stub
-        return super.processOrExpression(expr);
+        HBaseBooleanExpression right = (HBaseBooleanExpression) stack.pop();
+        HBaseBooleanExpression left = (HBaseBooleanExpression) stack.pop();
+        HBaseBooleanExpression orExpr = new HBaseBooleanExpression(left, right, Expression.OP_OR);
+        stack.push(orExpr);
+        return orExpr;
     }
 
     /* (non-Javadoc)
@@ -151,8 +154,11 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
     @Override
     protected Object processAndExpression(Expression expr)
     {
-        // TODO Auto-generated method stub
-        return super.processAndExpression(expr);
+        HBaseBooleanExpression right = (HBaseBooleanExpression) stack.pop();
+        HBaseBooleanExpression left = (HBaseBooleanExpression) stack.pop();
+        HBaseBooleanExpression andExpr = new HBaseBooleanExpression(left, right, Expression.OP_AND);
+        stack.push(andExpr);
+        return andExpr;
     }
 
     /* (non-Javadoc)

@@ -17,10 +17,15 @@ Contributors:
 **********************************************************************/
 package org.datanucleus.store.hbase.query.expression;
 
+import java.util.Arrays;
+
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.query.expression.Expression;
 
 /**
@@ -78,6 +83,26 @@ public class HBaseBooleanExpression extends HBaseExpression
                     comp, Bytes.toBytes((Short)value));
                 ((SingleColumnValueFilter)filter).setFilterIfMissing(true);
             }
+        }
+        else
+        {
+            throw new NucleusException("Dont currently support use of Literal of type "+value.getClass().getName() + " in expressions");
+        }
+    }
+
+    public HBaseBooleanExpression(HBaseBooleanExpression expr1, HBaseBooleanExpression expr2, Expression.Operator op)
+    {
+        if (op == Expression.OP_AND)
+        {
+            filter = new FilterList(Operator.MUST_PASS_ALL, Arrays.asList(expr1.getFilter(), expr2.getFilter()));
+        }
+        else if (op == Expression.OP_OR)
+        {
+            filter = new FilterList(Operator.MUST_PASS_ONE, Arrays.asList(expr1.getFilter(), expr2.getFilter()));
+        }
+        else
+        {
+            throw new NucleusException("Dont currently support operator "+op + " in boolean expression for HBase");
         }
     }
 
