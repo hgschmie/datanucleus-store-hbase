@@ -110,13 +110,11 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
 
             try
             {
-                NucleusLogger.QUERY.debug(">> Evaluating filter="+compilation.getExprFilter());
                 compilation.getExprFilter().evaluate(this);
                 HBaseExpression filterExpr = stack.pop();
                 if (filterExpr instanceof HBaseBooleanExpression)
                 {
                     this.filter = ((HBaseBooleanExpression)filterExpr).getFilter();
-                    NucleusLogger.GENERAL.info(">> filter evaluated as "+filter);
                 }
                 else
                 {
