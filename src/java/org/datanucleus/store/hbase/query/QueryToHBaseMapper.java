@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.exceptions.NucleusUserException;
@@ -67,13 +66,10 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
     /** State variable for the component being compiled. */
     CompilationComponent compileComponent;
 
-    Scan scan = null;
+    Filter filter = null;
 
     /** Whether the filter clause is completely evaluatable in the datastore. */
     boolean filterComplete = true;
-
-    /** Whether the result clause is completely evaluatable in the datastore. */
-    boolean resultComplete = true;
 
     Stack<HBaseExpression> stack = new Stack();
 
@@ -93,43 +89,14 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
         return filterComplete;
     }
 
-    public boolean isResultComplete()
+    public Filter getFilter()
     {
-        return resultComplete;
-    }
-
-    public Scan getScan()
-    {
-        return scan;
+        return filter;
     }
 
     public void compile()
     {
-        scan = new Scan();
-
-        compileFrom();
         compileFilter();
-        compileResult();
-        compileGrouping();
-        compileHaving();
-        compileOrdering();
-    }
-
-    /**
-     * Method to compile the FROM clause of the query
-     */
-    protected void compileFrom()
-    {
-        if (compilation.getExprFrom() != null)
-        {
-            // Process all ClassExpression(s) in the FROM, adding joins to the statement as required
-            compileComponent = CompilationComponent.FROM;
-            Expression[] fromExprs = compilation.getExprFrom();
-            for (int i=0;i<fromExprs.length;i++)
-            {
-                // TODO Compile FROM class expression
-            }
-        }
     }
 
     /**
@@ -148,9 +115,8 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
                 HBaseExpression filterExpr = stack.pop();
                 if (filterExpr instanceof HBaseBooleanExpression)
                 {
-                    Filter filter = ((HBaseBooleanExpression)filterExpr).getFilter();
+                    this.filter = ((HBaseBooleanExpression)filterExpr).getFilter();
                     NucleusLogger.GENERAL.info(">> filter evaluated as "+filter);
-                    scan.setFilter(filter);
                 }
                 else
                 {
@@ -165,76 +131,6 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
                 NucleusLogger.QUERY.debug(">> compileFilter caught exception ", e);
             }
 
-            compileComponent = null;
-        }
-    }
-
-    /**
-     * Method to compile the result clause of the query
-     */
-    protected void compileResult()
-    {
-        if (compilation.getExprResult() != null)
-        {
-            compileComponent = CompilationComponent.RESULT;
-
-            // Select any result expressions
-            Expression[] resultExprs = compilation.getExprResult();
-            for (int i=0;i<resultExprs.length;i++)
-            {
-                // TODO Compile this
-            }
-        }
-        // TODO Handle distinct
-        compileComponent = null;
-    }
-
-    /**
-     * Method to compile the grouping clause of the query
-     */
-    protected void compileGrouping()
-    {
-        if (compilation.getExprGrouping() != null)
-        {
-            // Apply any grouping to the statement
-            compileComponent = CompilationComponent.GROUPING;
-            Expression[] groupExprs = compilation.getExprGrouping();
-            for (int i = 0; i < groupExprs.length; i++)
-            {
-                // TODO Compile grouping
-            }
-            compileComponent = null;
-        }
-    }
-
-    /**
-     * Method to compile the having clause of the query
-     */
-    protected void compileHaving()
-    {
-        if (compilation.getExprHaving() != null)
-        {
-            // Apply any having to the statement
-            compileComponent = CompilationComponent.HAVING;
-            /*Expression havingExpr = */compilation.getExprHaving();
-            // TODO Compile having
-            compileComponent = null;
-        }
-    }
-
-    /**
-     * Method to compile the ordering clause of the query
-     */
-    protected void compileOrdering()
-    {
-        if (compilation.getExprOrdering() != null)
-        {
-            compileComponent = CompilationComponent.ORDERING;
-            Expression[] orderingExpr = compilation.getExprOrdering();
-            for (int i=0;i<orderingExpr.length;i++)
-            {
-                // TODO Compile ordering
-            }
             compileComponent = null;
         }
     }
@@ -456,10 +352,6 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
                 {
                     filterComplete = false;
                 }
-                else if (compileComponent == CompilationComponent.RESULT)
-                {
-                    resultComplete = false;
-                }
                 NucleusLogger.QUERY.debug(">> Primary " + expr +
                     " is not stored in this document, so unexecutable in datastore");
             }
@@ -558,10 +450,6 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
                     if (compileComponent == CompilationComponent.FILTER)
                     {
                         filterComplete = false;
-                    }
-                    else if (compileComponent == CompilationComponent.RESULT)
-                    {
-                        resultComplete = false;
                     }
                     NucleusLogger.QUERY.debug("Query has reference to " +
                         StringUtils.collectionToString(tuples) + " and " + mmd.getFullFieldName() +

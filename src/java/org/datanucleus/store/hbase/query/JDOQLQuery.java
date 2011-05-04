@@ -24,6 +24,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.hbase.filter.Filter;
+import org.datanucleus.exceptions.NucleusException;
 import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.query.evaluator.JDOQLEvaluator;
@@ -156,7 +158,6 @@ public class JDOQLQuery extends AbstractJDOQLQuery
         if (candidateCollection != null && inMemory)
         {
             // Querying a candidate collection in-memory, so just return now (don't need datastore compilation)
-            // TODO Maybe apply the result class checks ?
             return;
         }
 
@@ -218,7 +219,6 @@ public class JDOQLQuery extends AbstractJDOQLQuery
                 compileQueryFull(parameterValues, cmd);
             }
         }
-        // TODO Complete this
     }
     
     protected Object performExecute(Map parameters)
@@ -231,6 +231,8 @@ public class JDOQLQuery extends AbstractJDOQLQuery
             {
                 NucleusLogger.QUERY.debug(LOCALISER.msg("021046", "JDOQL", getSingleStringQuery(), null));
             }
+
+            boolean filterInMemory = true;
             List candidates = null;
             if (candidateCollection != null)
             {
@@ -247,14 +249,27 @@ public class JDOQLQuery extends AbstractJDOQLQuery
             }
             else
             {
+                Filter filter = null;
+                if (datastoreCompilation != null)
+                {
+                    if (datastoreCompilation.isFilterComplete())
+                    {
+                        filter = datastoreCompilation.getFilter();
+                        if (datastoreCompilation.isFilterComplete())
+                        {
+                            filterInMemory = false;
+                        }
+                    }
+                }
+
                 candidates = HBaseQueryUtils.getObjectsOfCandidateType(ec, mconn, candidateClass, subclasses,
-                    ignoreCache, getFetchPlan());
+                    ignoreCache, getFetchPlan(), filter);
             }
 
-            // Apply any result restrictions to the results
+            // Apply any other restrictions not handled in the datastore
             JavaQueryEvaluator resultMapper = new JDOQLEvaluator(this, candidates, compilation,
                 parameters, ec.getClassLoaderResolver());
-            Collection results = resultMapper.execute(true, true, true, true, true);
+            Collection results = resultMapper.execute(filterInMemory, true, true, true, true);
 
             if (NucleusLogger.QUERY.isDebugEnabled())
             {
@@ -262,7 +277,19 @@ public class JDOQLQuery extends AbstractJDOQLQuery
                     "" + (System.currentTimeMillis() - startTime)));
             }
 
-            return results;
+            if (type == BULK_DELETE)
+            {
+                ec.deleteObjects(results.toArray());
+                return Long.valueOf(results.size());
+            }
+            else if (type == BULK_UPDATE)
+            {
+                throw new NucleusException("Bulk Update is not yet supported");
+            }
+            else
+            {
+                return results;
+            }
         }
         finally
         {
@@ -290,20 +317,11 @@ public class JDOQLQuery extends AbstractJDOQLQuery
             NucleusLogger.QUERY.debug(LOCALISER.msg("021083", getLanguage(), toString()));
         }
 
-        // Generate statement for candidate(s)
-
         // Create a Scan object with filter, result etc as appropriate
         QueryToHBaseMapper mapper = new QueryToHBaseMapper(compilation, parameters, candidateCmd, ec, this);
         mapper.compile();
-        datastoreCompilation.setScan(mapper.getScan());
+        datastoreCompilation.setFilter(mapper.getFilter());
         datastoreCompilation.setFilterComplete(mapper.isFilterComplete());
-        datastoreCompilation.setResultComplete(mapper.isResultComplete());
-        NucleusLogger.QUERY.debug(">> Compiled HBase JDOQL to "+mapper.getScan());
-
-        if (candidateCollection != null)
-        {
-            // Restrict to the supplied candidate ids
-        }
 
         // Apply any range
         if (range != null)

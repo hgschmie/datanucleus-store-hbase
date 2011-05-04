@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.FetchPlan;
 import org.datanucleus.exceptions.NucleusDataStoreException;
@@ -62,10 +63,11 @@ class HBaseQueryUtils
      * @param subclasses Include subclasses?
      * @param ignoreCache Whether to ignore the cache
      * @param fetchPlan Fetch Plan
+     * @param filter Optional filter for the candidates
      * @return List of objects of the candidate type (or subclass)
      */
     static List getObjectsOfCandidateType(final ExecutionContext ec, final HBaseManagedConnection mconn,
-            Class candidateClass, boolean subclasses, boolean ignoreCache, FetchPlan fetchPlan)
+            Class candidateClass, boolean subclasses, boolean ignoreCache, FetchPlan fetchPlan, Filter filter)
     {
         List<AbstractClassMetaData> cmds = 
             MetaDataUtils.getMetaDataForCandidates(candidateClass, subclasses, ec);
@@ -75,7 +77,7 @@ class HBaseQueryUtils
         while (cmdIter.hasNext())
         {
             AbstractClassMetaData acmd = cmdIter.next();
-            results.addAll(getObjectsOfType(ec, mconn, acmd, ignoreCache, fetchPlan));
+            results.addAll(getObjectsOfType(ec, mconn, acmd, ignoreCache, fetchPlan, filter));
         }
 
         return results;
@@ -88,10 +90,11 @@ class HBaseQueryUtils
      * @param cmd Metadata for the type to return
      * @param ignoreCache Whether to ignore the cache
      * @param fp Fetch Plan
+     * @param filter Optional filter for the candidates
      * @return List of objects of the candidate type
      */
     static private List getObjectsOfType(final ExecutionContext ec, final HBaseManagedConnection mconn,
-            final AbstractClassMetaData cmd, boolean ignoreCache, FetchPlan fp)
+            final AbstractClassMetaData cmd, boolean ignoreCache, FetchPlan fp, final Filter filter)
     {
         List results = new ArrayList();
 
@@ -105,8 +108,11 @@ class HBaseQueryUtils
             {
                 public Object run() throws Exception
                 {
-                    HTable table = mconn.getHTable(HBaseUtils.getTableName(cmd));
                     Scan scan = new Scan();
+                    if (filter != null)
+                    {
+                        scan.setFilter(filter);
+                    }
 
                     // Retrieve all fetch-plan fields
                     for (int i=0; i<fpMembers.length; i++)
@@ -147,6 +153,7 @@ class HBaseQueryUtils
                         scan.addColumn(familyName, columnName);
                     }
 
+                    HTable table = mconn.getHTable(HBaseUtils.getTableName(cmd));
                     ResultScanner scanner = table.getScanner(scan);
                     Iterator<Result> it = scanner.iterator();
                     return it;
