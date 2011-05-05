@@ -382,6 +382,7 @@ public class StoreFieldManager extends AbstractFieldManager
                         // Persist list<ids> into the column of this object
                         writeObjectField(familyName, columnName, collIds);
                     }
+                    sm.wrapSCOField(fieldNumber, value, false, false, true);
                 }
                 else if (mmd.hasMap())
                 {
@@ -411,6 +412,7 @@ public class StoreFieldManager extends AbstractFieldManager
                         // TODO Implement map persistence non-serialised
                         throw new NucleusException("Only currently support maps serialised with HBase. Mark the field as serialized");
                     }
+                    sm.wrapSCOField(fieldNumber, value, false, false, true);
                 }
                 else if (mmd.hasArray())
                 {
@@ -460,6 +462,7 @@ public class StoreFieldManager extends AbstractFieldManager
 
                 // Persist serialised
                 writeObjectField(familyName, columnName, value);
+                sm.wrapSCOField(fieldNumber, value, false, false, true);
             }
         }
     }

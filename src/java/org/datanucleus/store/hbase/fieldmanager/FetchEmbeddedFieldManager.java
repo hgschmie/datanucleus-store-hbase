@@ -226,7 +226,7 @@ public class FetchEmbeddedFieldManager extends FetchFieldManager
                 }
 
                 ObjectStringConverter strConv = 
-                    sm.getExecutionContext().getNucleusContext().getTypeManager().getStringConverter(value.getClass());
+                    sm.getExecutionContext().getNucleusContext().getTypeManager().getStringConverter(embMmd.getType());
                 if (strConv != null)
                 {
                     // Persisted as a String, so convert back

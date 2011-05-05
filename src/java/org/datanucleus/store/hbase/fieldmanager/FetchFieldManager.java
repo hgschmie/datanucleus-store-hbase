@@ -473,7 +473,7 @@ public class FetchFieldManager extends AbstractFieldManager
                 }
 
                 ObjectStringConverter strConv = 
-                    ec.getNucleusContext().getTypeManager().getStringConverter(value.getClass());
+                    ec.getNucleusContext().getTypeManager().getStringConverter(mmd.getType());
                 if (strConv != null)
                 {
                     // Persisted as a String, so convert back
