@@ -11,15 +11,11 @@
 
     <repositories>
         <repository>
-            <id>local.repository</id>
-            <url>file:../../local.repository/trunk</url>
-            <layout>legacy</layout>
-        </repository>
-        <repository>
             <id>DN_M2_Repo</id>
             <url>http://www.datanucleus.org/downloads/maven2/</url>
         </repository>
     </repositories>
+
     <distributionManagement>
         <!-- use the following if you're not using a snapshot version. -->
         <repository>
