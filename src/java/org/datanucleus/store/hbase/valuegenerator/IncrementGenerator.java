@@ -94,7 +94,7 @@ public class IncrementGenerator extends AbstractDatastoreGenerator implements Va
                 HBaseAdmin admin = new HBaseAdmin(hbaseMgr.getHbaseConfig());
                 if (!admin.tableExists(this.tableName))
                 {
-                    NucleusLogger.DATASTORE_PERSIST.info("IncrementGenerator: Creating Table '" + this.tableName + "'");
+                    NucleusLogger.VALUEGENERATION.debug("IncrementGenerator: Creating Table '" + this.tableName + "'");
                     HTableDescriptor ht = new HTableDescriptor(this.tableName);
                     HColumnDescriptor hcd = new HColumnDescriptor(INCREMENT_COL_NAME);
                     hcd.setCompressionType(Algorithm.NONE);
@@ -117,7 +117,7 @@ public class IncrementGenerator extends AbstractDatastoreGenerator implements Va
             }
             catch (IOException ex)
             {
-                NucleusLogger.CONNECTION.fatal("Error instantiating IncrementGenerator", ex);
+                NucleusLogger.VALUEGENERATION.fatal("Error instantiating IncrementGenerator", ex);
             }
         }
     }
@@ -157,7 +157,7 @@ public class IncrementGenerator extends AbstractDatastoreGenerator implements Va
         }
         catch (IOException ex)
         {
-            NucleusLogger.DATASTORE_PERSIST.error("IncrementGenerator: Error incrementing generated value", ex);
+            NucleusLogger.VALUEGENERATION.error("IncrementGenerator: Error incrementing generated value", ex);
             throw new NucleusDataStoreException("Error incrementing generated value.", ex);
         }
         return new ValueGenerationBlock(oids);
