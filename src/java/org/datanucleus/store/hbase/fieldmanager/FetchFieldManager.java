@@ -439,6 +439,12 @@ public class FetchFieldManager extends AbstractFieldManager
                 {
                     return value;
                 }
+                else
+                {
+                    // TODO Implement map persistence non-serialised
+                    throw new NucleusException("Only currently support maps serialised with HBase." +
+                        " Mark the field (" + mmd.getFullFieldName() + ") as serialized");
+                }
             }
             else if (mmd.hasArray())
             {
