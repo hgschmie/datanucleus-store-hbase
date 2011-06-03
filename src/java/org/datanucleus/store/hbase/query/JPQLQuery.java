@@ -121,7 +121,7 @@ public class JPQLQuery extends AbstractJPQLQuery
                 return false;
             }
 
-            Object val = getExtension("datanucleus.query.evaluateInMemory");
+            Object val = getExtension(EXTENSION_EVALUATE_IN_MEMORY);
             if (val == null)
             {
                 return true;

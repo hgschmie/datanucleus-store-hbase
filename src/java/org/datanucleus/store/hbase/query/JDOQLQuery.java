@@ -122,7 +122,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
                 return false;
             }
 
-            Object val = getExtension("datanucleus.query.evaluateInMemory");
+            Object val = getExtension(EXTENSION_EVALUATE_IN_MEMORY);
             if (val == null)
             {
                 return true;
