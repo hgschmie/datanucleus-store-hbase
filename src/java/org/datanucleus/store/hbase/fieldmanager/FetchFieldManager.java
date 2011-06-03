@@ -25,6 +25,7 @@ import java.io.ObjectInputStream;
 import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Map;
 
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -439,12 +440,42 @@ public class FetchFieldManager extends AbstractFieldManager
                 {
                     return value;
                 }
-                else
+
+                Map map;
+                try
                 {
-                    // TODO Implement map persistence non-serialised
-                    throw new NucleusException("Only currently support maps serialised with HBase." +
-                        " Mark the field (" + mmd.getFullFieldName() + ") as serialized");
+                    Class instanceType = SCOUtils.getContainerInstanceType(mmd.getType(), false);
+                    map = (Map) instanceType.newInstance();
                 }
+                catch (Exception e)
+                {
+                    throw new NucleusDataStoreException(e.getMessage(), e);
+                }
+
+                Map mapIds = (Map)value;
+                Iterator<Map.Entry> mapIdIter = mapIds.entrySet().iterator();
+                while (mapIdIter.hasNext())
+                {
+                    Map.Entry entry = mapIdIter.next();
+                    Object mapKey = entry.getKey();
+                    Object mapValue = entry.getValue();
+                    if (mmd.getMap().getKeyClassMetaData(clr, ec.getMetaDataManager()) != null)
+                    {
+                        // Map key must be an "id"
+                        mapKey = ec.findObject(mapKey, true, true, null);
+                    }
+                    if (mmd.getMap().getValueClassMetaData(clr, ec.getMetaDataManager()) != null)
+                    {
+                        // Map value must be an "id"
+                        mapValue = ec.findObject(mapValue, true, true, null);
+                    }
+                    map.put(mapKey, mapValue);
+                }
+                if (sm != null)
+                {
+                    return sm.wrapSCOField(fieldNumber, map, false, false, true);
+                }
+                return map;
             }
             else if (mmd.hasArray())
             {

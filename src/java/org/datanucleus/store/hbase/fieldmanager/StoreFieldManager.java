@@ -25,6 +25,7 @@ import java.io.ObjectOutputStream;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -386,6 +387,7 @@ public class StoreFieldManager extends AbstractFieldManager
                 }
                 else if (mmd.hasMap())
                 {
+                    Map mapIds = new HashMap();
                     Map map = (Map)value;
                     Iterator<Map.Entry> mapIter = map.entrySet().iterator();
                     while (mapIter.hasNext())
@@ -395,13 +397,17 @@ public class StoreFieldManager extends AbstractFieldManager
                         Object mapValue = entry.getValue();
                         if (ec.getApiAdapter().isPersistable(mapKey))
                         {
-                            ec.persistObjectInternal(mapKey, sm, fieldNumber, -1);
+                            Object pKey = ec.persistObjectInternal(mapKey, sm, fieldNumber, -1);
+                            mapKey = sm.getExecutionContext().getApiAdapter().getIdForObject(pKey);
                         }
                         if (ec.getApiAdapter().isPersistable(mapValue))
                         {
-                            ec.persistObjectInternal(mapValue, sm, fieldNumber, -1);
+                            Object pVal = ec.persistObjectInternal(mapValue, sm, fieldNumber, -1);
+                            mapValue = sm.getExecutionContext().getApiAdapter().getIdForObject(pVal);
                         }
+                        mapIds.put(mapKey, mapValue);
                     }
+
                     if (mmd.isSerialized())
                     {
                         // Persist as serialised into the column of this object
@@ -409,9 +415,8 @@ public class StoreFieldManager extends AbstractFieldManager
                     }
                     else
                     {
-                        // TODO Implement map persistence non-serialised
-                        throw new NucleusException("Only currently support maps serialised with HBase." +
-                            " Mark the field (" + mmd.getFullFieldName() + ") as serialized");
+                        // Persist map<keyids,valids> into the column of this object
+                        writeObjectField(familyName, columnName, mapIds);
                     }
                     sm.wrapSCOField(fieldNumber, value, false, false, true);
                 }
