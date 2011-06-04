@@ -17,6 +17,7 @@ Contributors:
 **********************************************************************/
 package org.datanucleus.store.hbase.query;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -63,6 +64,14 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
     /** Input parameter values, keyed by the parameter name. Will be null if compiled pre-execution. */
     final Map parameters;
 
+    /** Work Map for keying parameter value for the name, for case where parameters input as positional. */
+    Map<String, Object> parameterValueByName = null;
+
+    Map<Integer, String> paramNameByPosition = null;
+
+    /** Positional parameter that we are up to (-1 implies not being used). */
+    int positionalParamNumber = -1;
+
     /** State variable for the component being compiled. */
     CompilationComponent compileComponent;
 
@@ -70,6 +79,12 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
 
     /** Whether the filter clause is completely evaluatable in the datastore. */
     boolean filterComplete = true;
+
+    /**
+     * State variable for whether this query is precompilable (hence whether it is cacheable).
+     * Or in other words, whether we can compile it without knowing parameter values.
+     */
+    boolean precompilable = true;
 
     Stack<HBaseExpression> stack = new Stack();
 
@@ -97,6 +112,16 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
     public void compile()
     {
         compileFilter();
+    }
+
+    /**
+     * Accessor for whether the query is precompilable (doesn't need to know parameter values
+     * to be able to compile it).
+     * @return Whether the query is precompilable and hence cacheable
+     */
+    public boolean isPrecompilable()
+    {
+        return precompilable;
     }
 
     /**
@@ -380,6 +405,65 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
     @Override
     protected Object processParameterExpression(ParameterExpression expr)
     {
+        if (expr.getPosition() >= 0)
+        {
+            if (paramNameByPosition == null)
+            {
+                paramNameByPosition = new HashMap<Integer, String>();
+            }
+            paramNameByPosition.put(Integer.valueOf(expr.getPosition()), expr.getId());
+        }
+
+        Object paramValue = null;
+        boolean paramValueSet = false;
+        if (parameters != null && parameters.size() > 0)
+        {
+            // Check if the parameter has a value
+            if (parameters.containsKey(expr.getId()))
+            {
+                // Named parameter
+                paramValue = parameters.get(expr.getId());
+                paramValueSet = true;
+            }
+            else if (parameterValueByName != null && parameterValueByName.containsKey(expr.getId()))
+            {
+                // Positional parameter, but already encountered
+                paramValue = parameterValueByName.get(expr.getId());
+                paramValueSet = true;
+            }
+            else
+            {
+                // Positional parameter, not yet encountered
+                int position = positionalParamNumber;
+                if (positionalParamNumber < 0)
+                {
+                    position = 0;
+                }
+                if (parameters.containsKey(Integer.valueOf(position)))
+                {
+                    paramValue = parameters.get(Integer.valueOf(position));
+                    paramValueSet = true;
+                    positionalParamNumber = position+1;
+                    if (parameterValueByName == null)
+                    {
+                        parameterValueByName = new HashMap<String, Object>();
+                    }
+                    parameterValueByName.put(expr.getId(), paramValue);
+                }
+            }
+        }
+
+        if (paramValueSet)
+        {
+            if (paramValue instanceof Number || paramValue instanceof String)
+            {
+                HBaseLiteral paramLit = new HBaseLiteral(paramValue);
+                precompilable = false;
+                stack.push(paramLit);
+                return paramLit;
+            }
+        }
+
         // TODO Auto-generated method stub
         return super.processParameterExpression(expr);
     }
