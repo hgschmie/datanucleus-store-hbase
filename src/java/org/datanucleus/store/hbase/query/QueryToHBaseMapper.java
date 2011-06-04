@@ -508,6 +508,7 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
 
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
         AbstractClassMetaData cmd = candidateCmd;
+        AbstractMemberMetaData prevMmd = null;
 
         Iterator<String> iter = tuples.iterator();
         while (iter.hasNext())
@@ -520,6 +521,10 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
             else
             {
                 AbstractMemberMetaData mmd = cmd.getMetaDataForMember(name);
+                if (prevMmd != null)
+                {
+                    mmd = prevMmd.getEmbeddedMetaData().getMemberMetaData()[mmd.getAbsoluteFieldNumber()];
+                }
                 int relationType = mmd.getRelationType(clr);
                 if (relationType == Relation.NONE)
                 {
@@ -529,20 +534,39 @@ public class QueryToHBaseMapper extends AbstractExpressionEvaluator
                             StringUtils.collectionToString(tuples) + " yet " + name + " is a non-relation field!");
                     }
 
-                    String familyName = HBaseUtils.getFamilyName(cmd, mmd.getAbsoluteFieldNumber());
-                    String columnName = HBaseUtils.getQualifierName(cmd, mmd.getAbsoluteFieldNumber());
-                    return familyName + "###" + columnName;
+                    if (prevMmd != null)
+                    {
+                        int fieldNumber = cmd.getMetaDataForMember(name).getAbsoluteFieldNumber();
+                        String familyName = HBaseUtils.getFamilyName(prevMmd, fieldNumber, HBaseUtils.getTableName(candidateCmd));
+                        String columnName = HBaseUtils.getQualifierName(prevMmd, fieldNumber);
+                        return familyName + "###" + columnName;
+                    }
+                    else
+                    {
+                        String familyName = HBaseUtils.getFamilyName(cmd, mmd.getAbsoluteFieldNumber());
+                        String columnName = HBaseUtils.getQualifierName(cmd, mmd.getAbsoluteFieldNumber());
+                        return familyName + "###" + columnName;
+                    }
                 }
                 else
                 {
-                    if (compileComponent == CompilationComponent.FILTER)
+                    if (mmd.isEmbedded() && Relation.isRelationSingleValued(relationType) && iter.hasNext())
                     {
-                        filterComplete = false;
+                        // Embedded field with subsequent field
+                        cmd = ec.getMetaDataManager().getMetaDataForClass(mmd.getType(), clr);
+                        prevMmd = mmd;
                     }
-                    NucleusLogger.QUERY.debug("Query has reference to " +
-                        StringUtils.collectionToString(tuples) + " and " + mmd.getFullFieldName() +
-                        " is not persisted into this document, so unexecutable in the datastore");
-                    return null;
+                    else
+                    {
+                        if (compileComponent == CompilationComponent.FILTER)
+                        {
+                            filterComplete = false;
+                        }
+                        NucleusLogger.QUERY.debug("Query has reference to " +
+                            StringUtils.collectionToString(tuples) + " and " + mmd.getFullFieldName() +
+                            " is not persisted into this document, so unexecutable in the datastore");
+                        return null;
+                    }
                 }
             }
         }
