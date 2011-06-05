@@ -193,11 +193,12 @@ public class JDOQLQuery extends AbstractJDOQLQuery
         QueryManager qm = getQueryManager();
         StoreManager storeMgr = ec.getStoreManager();
         String datastoreKey = storeMgr.getQueryCacheKey();
+        String cacheKey = getQueryCacheKey();
         if (useCaching())
         {
             // Allowing caching so try to find compiled (datastore) query
             datastoreCompilation = (HBaseQueryCompilation)qm.getDatastoreQueryCompilation(datastoreKey,
-                getLanguage(), toString());
+                getLanguage(), cacheKey);
             if (datastoreCompilation != null)
             {
                 // Cached compilation exists for this datastore so reuse it
@@ -219,8 +220,13 @@ public class JDOQLQuery extends AbstractJDOQLQuery
                 compileQueryFull(parameterValues, cmd);
             }
         }
+
+        if (datastoreCompilation.isPrecompilable() && cacheKey != null)
+        {
+            qm.addDatastoreQueryCompilation(datastoreKey, getLanguage(), cacheKey, datastoreCompilation);
+        }
     }
-    
+
     protected Object performExecute(Map parameters)
     {
         HBaseManagedConnection mconn = (HBaseManagedConnection) ec.getStoreManager().getConnection(ec);
@@ -322,6 +328,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
         mapper.compile();
         datastoreCompilation.setFilter(mapper.getFilter());
         datastoreCompilation.setFilterComplete(mapper.isFilterComplete());
+        datastoreCompilation.setPrecompilable(mapper.isPrecompilable());
 
         // Apply any range
         if (range != null)

@@ -192,11 +192,12 @@ public class JPQLQuery extends AbstractJPQLQuery
         QueryManager qm = getQueryManager();
         StoreManager storeMgr = ec.getStoreManager();
         String datastoreKey = storeMgr.getQueryCacheKey();
+        String cacheKey = getQueryCacheKey();
         if (useCaching())
         {
             // Allowing caching so try to find compiled (datastore) query
             datastoreCompilation = (HBaseQueryCompilation)qm.getDatastoreQueryCompilation(datastoreKey,
-                getLanguage(), toString());
+                getLanguage(), cacheKey);
             if (datastoreCompilation != null)
             {
                 // Cached compilation exists for this datastore so reuse it
@@ -217,6 +218,11 @@ public class JPQLQuery extends AbstractJPQLQuery
                 // Try to generate statement to perform the full query in the datastore
                 compileQueryFull(parameterValues, cmd);
             }
+        }
+
+        if (datastoreCompilation.isPrecompilable() && cacheKey != null)
+        {
+            qm.addDatastoreQueryCompilation(datastoreKey, getLanguage(), cacheKey, datastoreCompilation);
         }
     }
     

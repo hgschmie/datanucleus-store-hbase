@@ -28,8 +28,20 @@ public class HBaseQueryCompilation
 
     Filter filter;
 
+    boolean precompilable = true;
+
     public HBaseQueryCompilation()
     {
+    }
+
+    public void setPrecompilable(boolean precompilable)
+    {
+        this.precompilable = precompilable;
+    }
+
+    public boolean isPrecompilable()
+    {
+        return precompilable;
     }
 
     public void setFilter(Filter filter)
