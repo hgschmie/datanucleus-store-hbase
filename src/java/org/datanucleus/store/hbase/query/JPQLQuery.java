@@ -160,6 +160,12 @@ public class JPQLQuery extends AbstractJPQLQuery
             return;
         }
 
+        if (candidateClass == null || candidateClassName == null)
+        {
+            candidateClass = compilation.getCandidateClass();
+            candidateClassName = candidateClass.getName();
+        }
+
         if (candidateClass == null)
         {
             throw new NucleusUserException(LOCALISER.msg("021009", candidateClassName));
