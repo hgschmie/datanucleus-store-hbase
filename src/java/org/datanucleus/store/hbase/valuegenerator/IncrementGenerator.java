@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.datanucleus.exceptions.NucleusDataStoreException;
+import org.datanucleus.exceptions.NucleusUserException;
 import org.datanucleus.store.hbase.HBaseStoreManager;
 import org.datanucleus.store.valuegenerator.AbstractDatastoreGenerator;
 import org.datanucleus.store.valuegenerator.ValueGenerationBlock;
@@ -94,6 +95,11 @@ public class IncrementGenerator extends AbstractDatastoreGenerator implements Va
                 HBaseAdmin admin = new HBaseAdmin(hbaseMgr.getHbaseConfig());
                 if (!admin.tableExists(this.tableName))
                 {
+                    if (!storeMgr.isAutoCreateTables())
+                    {
+                        throw new NucleusUserException(LOCALISER.msg("040011", tableName));
+                    }
+
                     NucleusLogger.VALUEGENERATION.debug("IncrementGenerator: Creating Table '" + this.tableName + "'");
                     HTableDescriptor ht = new HTableDescriptor(this.tableName);
                     HColumnDescriptor hcd = new HColumnDescriptor(INCREMENT_COL_NAME);
