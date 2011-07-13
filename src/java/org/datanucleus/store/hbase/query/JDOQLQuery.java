@@ -127,13 +127,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
             {
                 return true;
             }
-            Boolean bool = Boolean.valueOf((String)val);
-            if (bool != null && !bool.booleanValue())
-            {
-                // User has explicitly said to not evaluate in-memory
-                return false;
-            }
-            return true;
+            return Boolean.valueOf((String)val);
         }
         return super.evaluateInMemory();
     }
