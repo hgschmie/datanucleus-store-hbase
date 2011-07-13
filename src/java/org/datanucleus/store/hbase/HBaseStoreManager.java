@@ -77,6 +77,9 @@ public class HBaseStoreManager extends AbstractStoreManager implements SchemaAwa
             }
         }
 
+        // Initialise the auto start process
+        initialiseAutoStart(clr);
+
         logConfiguration();
     }
 
