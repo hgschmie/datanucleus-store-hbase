@@ -45,6 +45,7 @@ import org.datanucleus.metadata.EmbeddedMetaData;
 import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.MetaDataUtils;
 import org.datanucleus.metadata.Relation;
+import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.FieldValues;
 import org.datanucleus.store.ObjectProvider;
@@ -131,11 +132,12 @@ class HBaseQueryUtils
                         }
                     }
 
-                    if (cmd.hasVersionStrategy() && cmd.getVersionMetaData().getFieldName() == null)
+                    VersionMetaData vermd = cmd.getVersionMetaDataForClass();
+                    if (cmd.isVersioned() && vermd.getFieldName() == null)
                     {
                         // Add version column
-                        byte[] familyName = HBaseUtils.getFamilyName(cmd.getVersionMetaData()).getBytes();
-                        byte[] columnName = HBaseUtils.getQualifierName(cmd.getVersionMetaData()).getBytes();
+                        byte[] familyName = HBaseUtils.getFamilyName(vermd).getBytes();
+                        byte[] columnName = HBaseUtils.getQualifierName(vermd).getBytes();
                         scan.addColumn(familyName, columnName);
                     }
                     if (cmd.hasDiscriminatorStrategy())
@@ -235,15 +237,16 @@ class HBaseQueryUtils
                 }
             }, null, ignoreCache);
 
-        if (cmd.hasVersionStrategy())
+        if (cmd.isVersioned())
         {
             // Set the version on the object
             ObjectProvider sm = ec.findObjectProvider(pc);
             Object version = null;
-            if (cmd.getVersionMetaData().getFieldName() != null)
+            VersionMetaData vermd = cmd.getVersionMetaDataForClass();
+            if (vermd.getFieldName() != null)
             {
                 // Set the version from the field value
-                AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(cmd.getVersionMetaData().getFieldName());
+                AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
                 version = sm.provideField(verMmd.getAbsoluteFieldNumber());
             }
             else
@@ -323,15 +326,16 @@ class HBaseQueryUtils
                 }
             }, null, ignoreCache);
 
-        if (cmd.hasVersionStrategy())
+        if (cmd.isVersioned())
         {
             // Set the version on the object
             ObjectProvider sm = ec.findObjectProvider(pc);
             Object version = null;
-            if (cmd.getVersionMetaData().getFieldName() != null)
+            VersionMetaData vermd = cmd.getVersionMetaDataForClass();
+            if (vermd.getFieldName() != null)
             {
                 // Set the version from the field value
-                AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(cmd.getVersionMetaData().getFieldName());
+                AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
                 version = sm.provideField(verMmd.getAbsoluteFieldNumber());
             }
             else

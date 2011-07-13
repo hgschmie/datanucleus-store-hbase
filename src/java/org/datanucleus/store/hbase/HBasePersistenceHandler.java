@@ -184,11 +184,12 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 put.add(familyName.getBytes(), columnName.getBytes(), discVal.getBytes());
             }
 
-            if (cmd.hasVersionStrategy())
+            if (cmd.isVersioned())
             {
-                String familyName = HBaseUtils.getFamilyName(cmd.getVersionMetaData());
-                String columnName = HBaseUtils.getQualifierName(cmd.getVersionMetaData());
-                if (cmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
+                VersionMetaData vermd = cmd.getVersionMetaDataForClass();
+                String familyName = HBaseUtils.getFamilyName(vermd);
+                String columnName = HBaseUtils.getQualifierName(vermd);
+                if (vermd.getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
                 {
                     long versionNumber = 1;
                     op.setTransactionalVersion(Long.valueOf(versionNumber));
@@ -197,9 +198,9 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                         NucleusLogger.DATASTORE.debug(LOCALISER.msg("HBase.Insert.ObjectPersistedWithVersion",
                             op.toPrintableID(), op.getInternalObjectId(), "" + versionNumber));
                     }
-                    if (cmd.getVersionMetaData().getFieldName() != null)
+                    if (vermd.getFieldName() != null)
                     {
-                        AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(cmd.getVersionMetaData().getFieldName());
+                        AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
                         Object verFieldValue = Long.valueOf(versionNumber);
                         if (verMmd.getType() == int.class || verMmd.getType() == Integer.class)
                         {
@@ -212,7 +213,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                         put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(versionNumber));
                     }
                 }
-                else if (cmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.DATE_TIME)
+                else if (vermd.getVersionStrategy() == VersionStrategy.DATE_TIME)
                 {
                     Date date = new Date();
                     Timestamp ts = new Timestamp(date.getTime());
@@ -222,9 +223,9 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                         NucleusLogger.DATASTORE.debug(LOCALISER.msg("HBase.Insert.ObjectPersistedWithVersion",
                             op.toPrintableID(), op.getInternalObjectId(), "" + ts));
                     }
-                    if (cmd.getVersionMetaData().getFieldName() != null)
+                    if (vermd.getFieldName() != null)
                     {
-                        AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(cmd.getVersionMetaData().getFieldName());
+                        AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
                         op.replaceField(verMmd.getAbsoluteFieldNumber(), ts);
                     }
                     else
@@ -298,7 +299,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             }
 
             HTable table = mconn.getHTable(HBaseUtils.getTableName(cmd));
-            if (cmd.hasVersionStrategy())
+            if (cmd.isVersioned())
             {
                 // Optimistic checking of version
                 Object currentVersion = op.getTransactionalVersion();
@@ -313,18 +314,18 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
 
             Put put = HBaseUtils.getPutForObject(op);
             Delete delete = HBaseUtils.getDeleteForObject(op);
-            if (cmd.hasVersionStrategy())
+            if (cmd.isVersioned())
             {
                 // Version object so calculate version to store with
                 Object currentVersion = op.getTransactionalVersion();
-                VersionMetaData vermd = cmd.getVersionMetaData();
+                VersionMetaData vermd = cmd.getVersionMetaDataForClass();
                 Object nextVersion = VersionHelper.getNextVersion(vermd.getVersionStrategy(), currentVersion);
                 op.setTransactionalVersion(nextVersion);
 
-                if (cmd.getVersionMetaData().getFieldName() != null)
+                if (vermd.getFieldName() != null)
                 {
                     // Update the field version value
-                    AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(cmd.getVersionMetaData().getFieldName());
+                    AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
                     op.replaceField(verMmd.getAbsoluteFieldNumber(), nextVersion);
                 }
                 else
@@ -432,7 +433,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                     }
                     boolean deletable = true;
                     AbstractClassMetaData cmd = op.getClassMetaData();
-                    if (cmd.hasVersionStrategy())
+                    if (cmd.isVersioned())
                     {
                         // Optimistic checking of version
                         Object currentVersion = op.getTransactionalVersion();
@@ -516,7 +517,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             }
 
             HTable table = mconn.getHTable(HBaseUtils.getTableName(cmd));
-            if (cmd.hasVersionStrategy())
+            if (cmd.isVersioned())
             {
                 // Optimistic checking of version
                 Object currentVersion = op.getTransactionalVersion();
@@ -615,14 +616,15 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             FetchFieldManager fm = new FetchFieldManager(op, result);
             op.replaceFields(cmd.getAllMemberPositions(), fm);
 
-            if (cmd.hasVersionStrategy() && op.getTransactionalVersion() == null)
+            if (cmd.isVersioned() && op.getTransactionalVersion() == null)
             {
                 // No version set, so retrieve it
-                if (cmd.getVersionMetaData().getFieldName() != null)
+                VersionMetaData vermd = cmd.getVersionMetaDataForClass();
+                if (vermd.getFieldName() != null)
                 {
                     // Version stored in a field
                     Object datastoreVersion =
-                        op.provideField(cmd.getAbsolutePositionOfMember(cmd.getVersionMetaData().getFieldName()));
+                        op.provideField(cmd.getAbsolutePositionOfMember(vermd.getFieldName()));
                     op.setVersion(datastoreVersion);
                 }
                 else

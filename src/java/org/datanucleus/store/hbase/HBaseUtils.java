@@ -650,19 +650,20 @@ public class HBaseUtils
      */
     public static Object getVersionForObject(AbstractClassMetaData cmd, Result result)
     {
-        if (cmd.hasVersionStrategy())
+        if (cmd.isVersioned())
         {
-            if (cmd.getVersionMetaData().getFieldName() != null)
+            VersionMetaData vermd = cmd.getVersionMetaDataForClass();
+            if (vermd.getFieldName() != null)
             {
                 // Version stored in a field
-                AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(cmd.getVersionMetaData().getFieldName());
+                AbstractMemberMetaData verMmd = cmd.getMetaDataForMember(vermd.getFieldName());
                 String familyName = HBaseUtils.getFamilyName(cmd, verMmd.getAbsoluteFieldNumber());
                 String columnName = HBaseUtils.getQualifierName(cmd, verMmd.getAbsoluteFieldNumber());
                 Object version = null;
                 try
                 {
                     byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-                    if (cmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
+                    if (vermd.getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
                     {
                         version = Bytes.toLong(bytes);
                     }
@@ -698,13 +699,14 @@ public class HBaseUtils
      */
     public static Object getSurrogateVersionForObject(AbstractClassMetaData cmd, Result result)
     {
-        String familyName = HBaseUtils.getFamilyName(cmd.getVersionMetaData());
-        String columnName = HBaseUtils.getQualifierName(cmd.getVersionMetaData());
+        VersionMetaData vermd = cmd.getVersionMetaDataForClass();
+        String familyName = HBaseUtils.getFamilyName(vermd);
+        String columnName = HBaseUtils.getQualifierName(vermd);
         Object version = null;
         try
         {
             byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-            if (cmd.getVersionMetaData().getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
+            if (vermd.getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
             {
                 version = Bytes.toLong(bytes);
             }
