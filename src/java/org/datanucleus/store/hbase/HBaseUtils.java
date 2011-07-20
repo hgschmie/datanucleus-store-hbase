@@ -295,10 +295,10 @@ public class HBaseUtils
         String columnName = null;
 
         // Try from the column name if specified as "a:b"
-        ColumnMetaData[] colmds = vermd.getColumnMetaData();
-        if (colmds != null && colmds.length > 0)
+        ColumnMetaData colmd = vermd.getColumnMetaData();
+        if (colmd != null)
         {
-            columnName = colmds[0].getName();
+            columnName = colmd.getName();
             if (columnName!= null && columnName.indexOf(":")>-1)
             {
                 return columnName.substring(0,columnName.indexOf(":"));
@@ -325,10 +325,10 @@ public class HBaseUtils
         String columnName = null;
 
         // Try the first column if specified
-        ColumnMetaData[] colmds = vermd.getColumnMetaData();
-        if (colmds != null && colmds.length > 0)
+        ColumnMetaData colmd = vermd.getColumnMetaData();
+        if (colmd != null)
         {
-            columnName = colmds[0].getName();
+            columnName = colmd.getName();
         }
         if (columnName == null)
         {
