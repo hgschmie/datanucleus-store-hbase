@@ -52,13 +52,33 @@ public class StoreFieldManager extends AbstractFieldManager
     Put put;
     Delete delete;
     AbstractClassMetaData cmd;
+    boolean insert; // Either insert or update
 
-    public StoreFieldManager(ObjectProvider sm, Put put, Delete delete)
+    public StoreFieldManager(ObjectProvider sm, Put put, Delete delete, boolean insert)
     {
         this.sm = sm;
         this.cmd = sm.getClassMetaData();
         this.put = put;
         this.delete = delete;
+        this.insert = insert;
+    }
+
+    protected boolean isStorable(int fieldNumber)
+    {
+        AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
+        return isStorable(mmd);
+    }
+
+    protected boolean isStorable(AbstractMemberMetaData mmd)
+    {
+        if ((insert && mmd.isInsertable()) || (!insert && mmd.isUpdateable()))
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     protected String getFamilyName(int fieldNumber)
@@ -78,6 +98,10 @@ public class StoreFieldManager extends AbstractFieldManager
 
     public void storeBooleanField(int fieldNumber, boolean value)
     {
+        if (!isStorable(fieldNumber))
+        {
+            return;
+        }
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
@@ -106,6 +130,10 @@ public class StoreFieldManager extends AbstractFieldManager
 
     public void storeByteField(int fieldNumber, byte value)
     {
+        if (!isStorable(fieldNumber))
+        {
+            return;
+        }
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         put.add(familyName.getBytes(), columnName.getBytes(), new byte[]{value});
@@ -113,6 +141,10 @@ public class StoreFieldManager extends AbstractFieldManager
 
     public void storeCharField(int fieldNumber, char value)
     {
+        if (!isStorable(fieldNumber))
+        {
+            return;
+        }
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
@@ -141,6 +173,10 @@ public class StoreFieldManager extends AbstractFieldManager
 
     public void storeDoubleField(int fieldNumber, double value)
     {
+        if (!isStorable(fieldNumber))
+        {
+            return;
+        }
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
@@ -169,6 +205,10 @@ public class StoreFieldManager extends AbstractFieldManager
 
     public void storeFloatField(int fieldNumber, float value)
     {
+        if (!isStorable(fieldNumber))
+        {
+            return;
+        }
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
@@ -197,6 +237,10 @@ public class StoreFieldManager extends AbstractFieldManager
 
     public void storeIntField(int fieldNumber, int value)
     {
+        if (!isStorable(fieldNumber))
+        {
+            return;
+        }
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
@@ -225,6 +269,10 @@ public class StoreFieldManager extends AbstractFieldManager
 
     public void storeLongField(int fieldNumber, long value)
     {
+        if (!isStorable(fieldNumber))
+        {
+            return;
+        }
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
@@ -253,6 +301,10 @@ public class StoreFieldManager extends AbstractFieldManager
 
     public void storeShortField(int fieldNumber, short value)
     {
+        if (!isStorable(fieldNumber))
+        {
+            return;
+        }
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
@@ -281,6 +333,10 @@ public class StoreFieldManager extends AbstractFieldManager
 
     public void storeStringField(int fieldNumber, String value)
     {
+        if (!isStorable(fieldNumber))
+        {
+            return;
+        }
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         if (value == null)
@@ -306,6 +362,11 @@ public class StoreFieldManager extends AbstractFieldManager
         ExecutionContext ec = sm.getExecutionContext();
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        if (!isStorable(mmd))
+        {
+            return;
+        }
+
         int relationType = mmd.getRelationType(clr);
         if (mmd.isEmbedded() && Relation.isRelationSingleValued(relationType))
         {
@@ -321,7 +382,7 @@ public class StoreFieldManager extends AbstractFieldManager
                 }
 
                 ObjectProvider embSM = ec.findObjectProviderForEmbedded(value, sm, mmd);
-                FieldManager ffm = new StoreEmbeddedFieldManager(embSM, put, delete, mmd, HBaseUtils.getTableName(cmd));
+                FieldManager ffm = new StoreEmbeddedFieldManager(embSM, put, delete, mmd, HBaseUtils.getTableName(cmd), insert);
                 embSM.provideFields(embcmd.getAllMemberPositions(), ffm);
                 return;
             }

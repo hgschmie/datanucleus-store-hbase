@@ -49,9 +49,9 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
     private final String tableName;
 
     public StoreEmbeddedFieldManager(ObjectProvider sm, Put put, Delete delete, AbstractMemberMetaData mmd,
-            String tableName)
+            String tableName, boolean insert)
     {
-        super(sm, put, delete);
+        super(sm, put, delete, insert);
         this.ownerMmd = mmd;
         this.tableName = tableName;
     }
@@ -76,6 +76,11 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
      */
     public void storeObjectField(int fieldNumber, Object value)
     {
+        if (!isStorable(fieldNumber))
+        {
+            return;
+        }
+
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         if (value == null)
@@ -97,7 +102,7 @@ public class StoreEmbeddedFieldManager extends StoreFieldManager
                 if (embcmd != null)
                 {
                     ObjectProvider embSM = ec.findObjectProviderForEmbedded(value, sm, embMmd);
-                    FieldManager ffm = new StoreEmbeddedFieldManager(embSM, put, delete, embMmd, tableName);
+                    FieldManager ffm = new StoreEmbeddedFieldManager(embSM, put, delete, embMmd, tableName, insert);
                     embSM.provideFields(embcmd.getAllMemberPositions(), ffm);
                     return;
                 }

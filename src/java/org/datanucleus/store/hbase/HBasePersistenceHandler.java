@@ -247,7 +247,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 }
             }
 
-            StoreFieldManager fm = new StoreFieldManager(op, put, delete);
+            StoreFieldManager fm = new StoreFieldManager(op, put, delete, true);
             op.provideFields(cmd.getAllMemberPositions(), fm);
 
             table.put(put);
@@ -348,7 +348,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                 }
             }
 
-            StoreFieldManager fm = new StoreFieldManager(op, put, delete);
+            StoreFieldManager fm = new StoreFieldManager(op, put, delete, false);
             op.provideFields(fieldNumbers, fm);
             if (!put.isEmpty())
             {
