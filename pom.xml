@@ -2,7 +2,7 @@
 <project>
     <modelVersion>4.0.0</modelVersion>
 	<groupId>org.datanucleus</groupId>
-	<version>3.0.0-release-SNAPSHOT</version>
+	<version>3.0.0-release</version>
     <artifactId>datanucleus-hbase</artifactId>
     <name>DataNucleus HBase plugin</name>
     <description>
