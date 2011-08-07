@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Hbase Plug-in
 Bundle-SymbolicName: org.datanucleus.store.hbase;singleton:=true
-Bundle-Version: 3.0.0.release
+Bundle-Version: 3.0.1
 Bundle-Vendor: DataNucleus
 Require-Bundle: org.datanucleus;bundle-version="3.0.0.release"
 Import-Package: javax.transaction;resolution:=optional,
