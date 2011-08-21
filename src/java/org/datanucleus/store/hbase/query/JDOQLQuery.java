@@ -31,7 +31,6 @@ import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.query.evaluator.JDOQLEvaluator;
 import org.datanucleus.query.evaluator.JavaQueryEvaluator;
 import org.datanucleus.store.ExecutionContext;
-import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.hbase.HBaseManagedConnection;
 import org.datanucleus.store.query.AbstractJDOQLQuery;
 import org.datanucleus.store.query.Query;
@@ -185,8 +184,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
         }
 
         QueryManager qm = getQueryManager();
-        StoreManager storeMgr = ec.getStoreManager();
-        String datastoreKey = storeMgr.getQueryCacheKey();
+        String datastoreKey = getStoreManager().getQueryCacheKey();
         String cacheKey = getQueryCacheKey();
         if (useCaching())
         {
@@ -223,7 +221,7 @@ public class JDOQLQuery extends AbstractJDOQLQuery
 
     protected Object performExecute(Map parameters)
     {
-        HBaseManagedConnection mconn = (HBaseManagedConnection) ec.getStoreManager().getConnection(ec);
+        HBaseManagedConnection mconn = (HBaseManagedConnection) getStoreManager().getConnection(ec);
         try
         {
             long startTime = System.currentTimeMillis();
