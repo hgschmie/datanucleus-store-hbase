@@ -31,6 +31,7 @@ import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.query.evaluator.JDOQLEvaluator;
 import org.datanucleus.query.evaluator.JavaQueryEvaluator;
 import org.datanucleus.store.ExecutionContext;
+import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.hbase.HBaseManagedConnection;
 import org.datanucleus.store.query.AbstractJDOQLQuery;
 import org.datanucleus.store.query.Query;
@@ -47,31 +48,34 @@ public class JDOQLQuery extends AbstractJDOQLQuery
 
     /**
      * Constructs a new query instance that uses the given persistence manager.
+     * @param storeMgr StoreManager for this query
      * @param ec Execution Context
      */
-    public JDOQLQuery(ExecutionContext ec)
+    public JDOQLQuery(StoreManager storeMgr, ExecutionContext ec)
     {
-        this(ec, (JDOQLQuery) null);
+        this(storeMgr, ec, (JDOQLQuery) null);
     }
 
     /**
      * Constructs a new query instance having the same criteria as the given query.
+     * @param storeMgr StoreManager for this query
      * @param ec Execution Context
      * @param q The query from which to copy criteria.
      */
-    public JDOQLQuery(ExecutionContext ec, JDOQLQuery q)
+    public JDOQLQuery(StoreManager storeMgr, ExecutionContext ec, JDOQLQuery q)
     {
-        super(ec, q);
+        super(storeMgr, ec, q);
     }
 
     /**
      * Constructor for a JDOQL query where the query is specified using the "Single-String" format.
+     * @param storeMgr StoreManager for this query
      * @param ec Execution Context
      * @param query The query string
      */
-    public JDOQLQuery(ExecutionContext ec, String query)
+    public JDOQLQuery(StoreManager storeMgr, ExecutionContext ec, String query)
     {
-        super(ec, query);
+        super(storeMgr, ec, query);
     }
 
     /**

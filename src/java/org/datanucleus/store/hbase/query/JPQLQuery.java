@@ -30,6 +30,7 @@ import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.query.evaluator.JPQLEvaluator;
 import org.datanucleus.query.evaluator.JavaQueryEvaluator;
 import org.datanucleus.store.ExecutionContext;
+import org.datanucleus.store.StoreManager;
 import org.datanucleus.store.hbase.HBaseManagedConnection;
 import org.datanucleus.store.query.AbstractJPQLQuery;
 import org.datanucleus.store.query.Query;
@@ -46,31 +47,34 @@ public class JPQLQuery extends AbstractJPQLQuery
 
     /**
      * Constructs a new query instance that uses the given persistence manager.
+     * @param storeMgr StoreManager for this query
      * @param ec Execution Context
      */
-    public JPQLQuery(ExecutionContext ec)
+    public JPQLQuery(StoreManager storeMgr, ExecutionContext ec)
     {
-        this(ec, (JPQLQuery) null);
+        this(storeMgr, ec, (JPQLQuery) null);
     }
 
     /**
      * Constructs a new query instance having the same criteria as the given query.
+     * @param storeMgr StoreManager for this query
      * @param ec Execution Context
      * @param q The query from which to copy criteria.
      */
-    public JPQLQuery(ExecutionContext ec, JPQLQuery q)
+    public JPQLQuery(StoreManager storeMgr, ExecutionContext ec, JPQLQuery q)
     {
-        super(ec, q);
+        super(storeMgr, ec, q);
     }
 
     /**
      * Constructor for a JPQL query where the query is specified using the "Single-String" format.
+     * @param storeMgr StoreManager for this query
      * @param ec Execution Context
      * @param query The query string
      */
-    public JPQLQuery(ExecutionContext ec, String query)
+    public JPQLQuery(StoreManager storeMgr, ExecutionContext ec, String query)
     {
-        super(ec, query);
+        super(storeMgr, ec, query);
     }
 
     /**
