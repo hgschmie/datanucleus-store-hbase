@@ -45,5 +45,7 @@ Contributors:
     <extension point="org.datanucleus.persistence_properties">
         <persistence-property name="datanucleus.hbase.enforceUniquenessInApplication" datastore="true" value="false"
             validator="org.datanucleus.properties.BooleanPropertyValidator"/>
+        <persistence-property name="datanucleus.hbase.serialisedPK" datastore="true" value="false"
+            validator="org.datanucleus.properties.BooleanPropertyValidator"/>
     </extension>
 </plugin>

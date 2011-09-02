@@ -744,6 +744,8 @@ public class HBaseUtils
     public static Put getPutForObject(ObjectProvider sm) throws IOException
     {
         AbstractClassMetaData cmd = sm.getClassMetaData();
+        boolean serialisedPk = sm.getExecutionContext().getNucleusContext().getPersistenceConfiguration().getBooleanProperty("datanucleus.hbase.serialisedPK");
+
         Object pkValue = null;
         if (cmd.getIdentityType() == IdentityType.DATASTORE)
         {
@@ -755,18 +757,15 @@ public class HBaseUtils
             pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
         }
 
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(bos);
-        oos.writeObject(pkValue);
-        Put batch = new Put(bos.toByteArray());
-        oos.close();
-        bos.close();
-        return batch;
+        byte[] pkBytes = getBytesForPkValue(pkValue, serialisedPk);
+        return new Put(pkBytes);
     }
 
     public static Delete getDeleteForObject(ObjectProvider sm) throws IOException
     {
         AbstractClassMetaData cmd = sm.getClassMetaData();
+        boolean serialisedPk = sm.getExecutionContext().getNucleusContext().getPersistenceConfiguration().getBooleanProperty("datanucleus.hbase.serialisedPK");
+
         Object pkValue = null;
         if (cmd.getIdentityType() == IdentityType.DATASTORE)
         {
@@ -778,18 +777,15 @@ public class HBaseUtils
             pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
         }
 
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(bos);
-        oos.writeObject(pkValue);
-        Delete batch = new Delete(bos.toByteArray());
-        oos.close();
-        bos.close();
-        return batch;
+        byte[] pkBytes = getBytesForPkValue(pkValue, serialisedPk);
+        return new Delete(pkBytes);
     }
 
     public static Result getResultForObject(ObjectProvider sm, HTable table) throws IOException
     {
         AbstractClassMetaData cmd = sm.getClassMetaData();
+        boolean serialisedPk = sm.getExecutionContext().getNucleusContext().getPersistenceConfiguration().getBooleanProperty("datanucleus.hbase.serialisedPK");
+
         Object pkValue = null;
         if (cmd.getIdentityType() == IdentityType.DATASTORE)
         {
@@ -801,19 +797,16 @@ public class HBaseUtils
             pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
         }
 
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(bos);
-        oos.writeObject(pkValue);
-        Get get = new Get(bos.toByteArray());
-        Result result = table.get(get);
-        oos.close();
-        bos.close();
-        return result;
+        byte[] pkBytes = getBytesForPkValue(pkValue, serialisedPk);
+        Get get = new Get(pkBytes);
+        return table.get(get);
     }
 
     public static boolean objectExistsInTable(ObjectProvider sm, HTable table) throws IOException
     {
         AbstractClassMetaData cmd = sm.getClassMetaData();
+        boolean serialisedPk = sm.getExecutionContext().getNucleusContext().getPersistenceConfiguration().getBooleanProperty("datanucleus.hbase.serialisedPK");
+
         Object pkValue = null;
         if (cmd.getIdentityType() == IdentityType.DATASTORE)
         {
@@ -825,13 +818,61 @@ public class HBaseUtils
             pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
         }
 
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(bos);
-        oos.writeObject(pkValue);
-        Get get = new Get(bos.toByteArray());
-        boolean result = table.exists(get);
-        oos.close();
-        bos.close();
-        return result;
+        byte[] pkBytes = getBytesForPkValue(pkValue, serialisedPk);
+        Get get = new Get(pkBytes);
+        return table.exists(get);
+    }
+
+    static byte[] getBytesForPkValue(Object pkValue, boolean useSerialisation) throws IOException
+    {
+        if (useSerialisation)
+        {
+            // Legacy data, up to and including DN 3.0.1
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(bos);
+            try
+            {
+                oos.writeObject(pkValue);
+                return bos.toByteArray();
+            }
+            finally
+            {
+                oos.close();
+                bos.close();
+            }
+        }
+
+        if (pkValue instanceof String)
+        {
+            return Bytes.toBytes((String)pkValue);
+        }
+        else if (pkValue instanceof Long)
+        {
+            return Bytes.toBytes(((Long)pkValue).longValue());
+        }
+        else if (pkValue instanceof Integer)
+        {
+            return Bytes.toBytes(((Integer)pkValue).intValue());
+        }
+        else if (pkValue instanceof Short)
+        {
+            return Bytes.toBytes(((Short)pkValue).shortValue());
+        }
+        else
+        {
+            // Object serialisation approach
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(bos);
+            try
+            {
+                oos.writeObject(pkValue);
+                return bos.toByteArray();
+            }
+            finally
+            {
+                oos.close();
+                bos.close();
+            }
+        }
     }
 }
