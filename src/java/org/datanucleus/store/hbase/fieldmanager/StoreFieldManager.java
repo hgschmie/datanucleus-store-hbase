@@ -508,7 +508,47 @@ public class StoreFieldManager extends AbstractFieldManager
             {
                 if (!mmd.isSerialized())
                 {
-                    if (Enum.class.isAssignableFrom(value.getClass()))
+                    if (Boolean.class.isAssignableFrom(value.getClass()))
+                    {
+                        storeBooleanField(fieldNumber, (Boolean)value);
+                        return;
+                    }
+                    else if (Byte.class.isAssignableFrom(value.getClass()))
+                    {
+                        storeByteField(fieldNumber, (Byte)value);
+                        return;
+                    }
+                    else if (Character.class.isAssignableFrom(value.getClass()))
+                    {
+                        storeCharField(fieldNumber, (Character)value);
+                        return;
+                    }
+                    else if (Double.class.isAssignableFrom(value.getClass()))
+                    {
+                        storeDoubleField(fieldNumber, (Double)value);
+                        return;
+                    }
+                    else if (Float.class.isAssignableFrom(value.getClass()))
+                    {
+                        storeFloatField(fieldNumber, (Float)value);
+                        return;
+                    }
+                    else if (Integer.class.isAssignableFrom(value.getClass()))
+                    {
+                        storeIntField(fieldNumber, (Integer)value);
+                        return;
+                    }
+                    else if (Long.class.isAssignableFrom(value.getClass()))
+                    {
+                        storeLongField(fieldNumber, (Long)value);
+                        return;
+                    }
+                    else if (Short.class.isAssignableFrom(value.getClass()))
+                    {
+                        storeShortField(fieldNumber, (Short)value);
+                        return;
+                    }
+                    else if (Enum.class.isAssignableFrom(value.getClass()))
                     {
                         // Persist as a String
                         // TODO Persist as number when requested

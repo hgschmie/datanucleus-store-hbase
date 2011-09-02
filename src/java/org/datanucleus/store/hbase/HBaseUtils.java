@@ -27,6 +27,8 @@ import java.io.ObjectOutputStream;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.sql.Timestamp;
+import java.util.Date;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -53,7 +55,9 @@ import org.datanucleus.metadata.IdentityType;
 import org.datanucleus.metadata.Relation;
 import org.datanucleus.metadata.VersionMetaData;
 import org.datanucleus.metadata.VersionStrategy;
+import org.datanucleus.store.ExecutionContext;
 import org.datanucleus.store.ObjectProvider;
+import org.datanucleus.store.types.ObjectStringConverter;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
 
@@ -664,7 +668,7 @@ public class HBaseUtils
      * @param result The result
      * @return The version
      */
-    public static Object getVersionForObject(AbstractClassMetaData cmd, Result result)
+    public static Object getVersionForObject(AbstractClassMetaData cmd, Result result, ExecutionContext ec)
     {
         if (cmd.isVersioned())
         {
@@ -678,10 +682,20 @@ public class HBaseUtils
                 Object version = null;
                 try
                 {
+                    NucleusLogger.GENERAL.info(">> getVersion family=" + familyName + " col=" + columnName + " field=" + verMmd.getFullFieldName());
                     byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
                     if (vermd.getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
                     {
                         version = Bytes.toLong(bytes);
+                        NucleusLogger.GENERAL.info(">> Version from datastore(long)="+version);
+                    }
+                    else if (Date.class.isAssignableFrom(verMmd.getType()))
+                    {
+                        // Field is of type Date (hence persisted as String), but version needs to be Timestamp
+                        String strValue = new String(bytes);
+                        ObjectStringConverter strConv = ec.getNucleusContext().getTypeManager().getStringConverter(verMmd.getType());
+                        version = strConv.toObject(strValue);
+                        version = new Timestamp(((Date)version).getTime());
                     }
                     else
                     {

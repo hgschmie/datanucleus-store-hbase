@@ -302,14 +302,9 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             if (cmd.isVersioned())
             {
                 // Optimistic checking of version
-                Object currentVersion = op.getTransactionalVersion();
                 Result result = HBaseUtils.getResultForObject(op, table);
-                Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result);
-                if (!datastoreVersion.equals(currentVersion)) // TODO Use VersionHelper.performVersionCheck
-                {
-                    throw new NucleusOptimisticException("Cannot update object with id " + op.getObjectId() +
-                        " since has version=" + currentVersion + " while datastore has version=" + datastoreVersion);
-                }
+                Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result, op.getExecutionContext());
+                VersionHelper.performVersionCheck(op, datastoreVersion, cmd.getVersionMetaDataForClass());
             }
 
             Put put = HBaseUtils.getPutForObject(op);
@@ -438,7 +433,7 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
                         // Optimistic checking of version
                         Object currentVersion = op.getTransactionalVersion();
                         Result result = HBaseUtils.getResultForObject(op, table);
-                        Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result);
+                        Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result, ec);
                         if (!datastoreVersion.equals(currentVersion)) // TODO Use VersionHelper.performVersionCheck
                         {
                             if (optimisticExcps == null)
@@ -520,14 +515,9 @@ public class HBasePersistenceHandler extends AbstractPersistenceHandler
             if (cmd.isVersioned())
             {
                 // Optimistic checking of version
-                Object currentVersion = op.getTransactionalVersion();
                 Result result = HBaseUtils.getResultForObject(op, table);
-                Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result);
-                if (!datastoreVersion.equals(currentVersion)) // TODO Use VersionHelper.performVersionCheck
-                {
-                    throw new NucleusOptimisticException("Cannot delete object with id " + op.getObjectId() +
-                        " since has version=" + currentVersion + " while datastore has version=" + datastoreVersion);
-                }
+                Object datastoreVersion = HBaseUtils.getVersionForObject(cmd, result, op.getExecutionContext());
+                VersionHelper.performVersionCheck(op, datastoreVersion, cmd.getVersionMetaDataForClass());
             }
 
             // Invoke any cascade deletion
