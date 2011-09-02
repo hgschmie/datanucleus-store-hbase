@@ -84,42 +84,11 @@ public class FetchFieldManager extends AbstractFieldManager
 
     public boolean fetchBooleanField(int fieldNumber)
     {
-        boolean value;
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        if (bytes == null)
-        {
-            // Handle missing field
-            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
-            if (dflt != null)
-            {
-                return Boolean.valueOf(dflt).booleanValue();
-            }
-            return false;
-        }
-
-        if (mmd.isSerialized())
-        {
-            try
-            {
-                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-                ObjectInputStream ois = new ObjectInputStream(bis);
-                value = ois.readBoolean();
-                ois.close();
-                bis.close();
-            }
-            catch (IOException e)
-            {
-                throw new NucleusException(e.getMessage(), e);
-            }
-        }
-        else
-        {
-            value = Bytes.toBoolean(bytes);
-        }
-        return value;
+        return fetchBooleanInternal(mmd, bytes);
     }
 
     public byte fetchByteField(int fieldNumber)
@@ -128,259 +97,61 @@ public class FetchFieldManager extends AbstractFieldManager
         String columnName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        if (bytes == null)
-        {
-            // Handle missing field
-            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
-            if (dflt != null)
-            {
-                return dflt.getBytes()[0];
-            }
-            return 0;
-        }
-
-        return bytes[0];
+        return fetchByteInternal(mmd, bytes);
     }
 
     public char fetchCharField(int fieldNumber)
     {
-        char value;
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        if (bytes == null)
-        {
-            // Handle missing field
-            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
-            if (dflt != null && dflt.length() > 0)
-            {
-                return dflt.charAt(0);
-            }
-            return 0;
-        }
-
-        if (mmd.isSerialized())
-        {
-            try
-            {
-                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-                ObjectInputStream ois = new ObjectInputStream(bis);
-                value = ois.readChar();
-                ois.close();
-                bis.close();
-            }
-            catch (IOException e)
-            {
-                throw new NucleusException(e.getMessage(), e);
-            }
-        }
-        else
-        {
-            String strValue = new String(bytes);
-            value = strValue.charAt(0);
-        }
-        return value;
+        return fetchCharInternal(mmd, bytes);
     }
 
     public double fetchDoubleField(int fieldNumber)
     {
-        double value;
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        if (bytes == null)
-        {
-            // Handle missing field
-            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
-            if (dflt != null)
-            {
-                return Double.valueOf(dflt).doubleValue();
-            }
-            return 0;
-        }
-
-        if (mmd.isSerialized())
-        {
-            try
-            {
-                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-                ObjectInputStream ois = new ObjectInputStream(bis);
-                value = ois.readDouble();
-                ois.close();
-                bis.close();
-            }
-            catch (IOException e)
-            {
-                throw new NucleusException(e.getMessage(), e);
-            }
-        }
-        else
-        {
-            value = Bytes.toDouble(bytes);
-        }
-        return value;
+        return fetchDoubleInternal(mmd, bytes);
     }
 
     public float fetchFloatField(int fieldNumber)
     {
-        float value;
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        if (bytes == null)
-        {
-            // Handle missing field
-            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
-            if (dflt != null)
-            {
-                return Float.valueOf(dflt).floatValue();
-            }
-            return 0;
-        }
-
-        if (mmd.isSerialized())
-        {
-            try
-            {
-                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-                ObjectInputStream ois = new ObjectInputStream(bis);
-                value = ois.readFloat();
-                ois.close();
-                bis.close();
-            }
-            catch (IOException e)
-            {
-                throw new NucleusException(e.getMessage(), e);
-            }
-        }
-        else
-        {
-            value = Bytes.toFloat(bytes);
-        }
-        return value;
+        return fetchFloatInternal(mmd, bytes);
     }
 
     public int fetchIntField(int fieldNumber)
     {
-        int value;
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        if (bytes == null)
-        {
-            // Handle missing field
-            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
-            if (dflt != null)
-            {
-                return Integer.valueOf(dflt).intValue();
-            }
-            return 0;
-        }
-
-        if (mmd.isSerialized())
-        {
-            try
-            {
-                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-                ObjectInputStream ois = new ObjectInputStream(bis);
-                value = ois.readInt();
-                ois.close();
-                bis.close();
-            }
-            catch (IOException e)
-            {
-                throw new NucleusException(e.getMessage(), e);
-            }
-        }
-        else
-        {
-            value = Bytes.toInt(bytes);
-        }
-        return value;
+        return fetchIntInternal(mmd, bytes);
     }
 
     public long fetchLongField(int fieldNumber)
     {
-        long value;
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        if (bytes == null)
-        {
-            // Handle missing field
-            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
-            if (dflt != null)
-            {
-                return Long.valueOf(dflt).longValue();
-            }
-            return 0;
-        }
-
-        if (mmd.isSerialized())
-        {
-            try
-            {
-                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-                ObjectInputStream ois = new ObjectInputStream(bis);
-                value = ois.readLong();
-                ois.close();
-                bis.close();
-            }
-            catch (IOException e)
-            {
-                throw new NucleusException(e.getMessage(), e);
-            }
-        }
-        else
-        {
-            value = Bytes.toLong(bytes);
-        }
-        return value;
+        return fetchLongInternal(mmd, bytes);
     }
 
     public short fetchShortField(int fieldNumber)
     {
-        short value;
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        if (bytes == null)
-        {
-            // Handle missing field
-            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
-            if (dflt != null)
-            {
-                return Short.valueOf(dflt).shortValue();
-            }
-            return 0;
-        }
-
-        if (mmd.isSerialized())
-        {
-            try
-            {
-                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-                ObjectInputStream ois = new ObjectInputStream(bis);
-                value = ois.readShort();
-                ois.close();
-                bis.close();
-            }
-            catch (IOException e)
-            {
-                throw new NucleusException(e.getMessage(), e);
-            }
-        }
-        else
-        {
-            value = Bytes.toShort(bytes);
-        }
-        return value;
+        return fetchShortInternal(mmd, bytes);
     }
 
     public String fetchStringField(int fieldNumber)
@@ -466,7 +237,7 @@ public class FetchFieldManager extends AbstractFieldManager
 
         String familyName = HBaseUtils.getFamilyName(cmd, fieldNumber);
         String columnName = HBaseUtils.getQualifierName(cmd, fieldNumber);
-        Object value = readObjectField(familyName, columnName, result);
+        Object value = readObjectField(familyName, columnName, result, fieldNumber, mmd);
         if (value == null)
         {
             return null;
@@ -609,12 +380,46 @@ public class FetchFieldManager extends AbstractFieldManager
         }
     }
 
-    protected Object readObjectField(String familyName, String columnName, Result result)
+    protected Object readObjectField(String familyName, String columnName, Result result, int fieldNumber,
+            AbstractMemberMetaData mmd)
     {
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
         if (bytes == null)
         {
             return null;
+        }
+
+        if (mmd.getType() == Boolean.class)
+        {
+            return fetchBooleanInternal(mmd, bytes);
+        }
+        else if (mmd.getType() == Byte.class)
+        {
+            return fetchByteInternal(mmd, bytes);
+        }
+        else if (mmd.getType() == Character.class)
+        {
+            return fetchCharInternal(mmd, bytes);
+        }
+        else if (mmd.getType() == Double.class)
+        {
+            return fetchDoubleInternal(mmd, bytes);
+        }
+        else if (mmd.getType() == Float.class)
+        {
+            return fetchFloatInternal(mmd, bytes);
+        }
+        else if (mmd.getType() == Integer.class)
+        {
+            return fetchIntInternal(mmd, bytes);
+        }
+        else if (mmd.getType() == Long.class)
+        {
+            return fetchLongInternal(mmd, bytes);
+        }
+        else if (mmd.getType() == Short.class)
+        {
+            return fetchShortInternal(mmd, bytes);
         }
 
         ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
@@ -652,5 +457,274 @@ public class FetchFieldManager extends AbstractFieldManager
                 throw new NucleusException(ioe.getMessage(), ioe);
             }
         }
+    }
+
+    private boolean fetchBooleanInternal(AbstractMemberMetaData mmd, byte[] bytes)
+    {
+        boolean value;
+        if (bytes == null)
+        {
+            // Handle missing field
+            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
+            if (dflt != null)
+            {
+                return Boolean.valueOf(dflt).booleanValue();
+            }
+            return false;
+        }
+
+        if (mmd.isSerialized())
+        {
+            try
+            {
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                value = ois.readBoolean();
+                ois.close();
+                bis.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
+        }
+        else
+        {
+            value = Bytes.toBoolean(bytes);
+        }
+        return value;
+    }
+
+    private byte fetchByteInternal(AbstractMemberMetaData mmd, byte[] bytes)
+    {
+        if (bytes == null)
+        {
+            // Handle missing field
+            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
+            if (dflt != null)
+            {
+                return dflt.getBytes()[0];
+            }
+            return 0;
+        }
+
+        return bytes[0];
+    }
+
+    private char fetchCharInternal(AbstractMemberMetaData mmd, byte[] bytes)
+    {
+        char value;
+        if (bytes == null)
+        {
+            // Handle missing field
+            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
+            if (dflt != null && dflt.length() > 0)
+            {
+                return dflt.charAt(0);
+            }
+            return 0;
+        }
+
+        if (mmd.isSerialized())
+        {
+            try
+            {
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                value = ois.readChar();
+                ois.close();
+                bis.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
+        }
+        else
+        {
+            String strValue = new String(bytes);
+            value = strValue.charAt(0);
+        }
+        return value;
+    }
+
+    private double fetchDoubleInternal(AbstractMemberMetaData mmd, byte[] bytes)
+    {
+        double value;
+        if (bytes == null)
+        {
+            // Handle missing field
+            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
+            if (dflt != null)
+            {
+                return Double.valueOf(dflt).doubleValue();
+            }
+            return 0;
+        }
+
+        if (mmd.isSerialized())
+        {
+            try
+            {
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                value = ois.readDouble();
+                ois.close();
+                bis.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
+        }
+        else
+        {
+            value = Bytes.toDouble(bytes);
+        }
+        return value;
+    }
+
+    private float fetchFloatInternal(AbstractMemberMetaData mmd, byte[] bytes)
+    {
+        float value;
+        if (bytes == null)
+        {
+            // Handle missing field
+            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
+            if (dflt != null)
+            {
+                return Float.valueOf(dflt).floatValue();
+            }
+            return 0;
+        }
+
+        if (mmd.isSerialized())
+        {
+            try
+            {
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                value = ois.readFloat();
+                ois.close();
+                bis.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
+        }
+        else
+        {
+            value = Bytes.toFloat(bytes);
+        }
+        return value;
+    }
+
+    private int fetchIntInternal(AbstractMemberMetaData mmd, byte[] bytes)
+    {
+        int value;
+        if (bytes == null)
+        {
+            // Handle missing field
+            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
+            if (dflt != null)
+            {
+                return Integer.valueOf(dflt).intValue();
+            }
+            return 0;
+        }
+
+        if (mmd.isSerialized())
+        {
+            try
+            {
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                value = ois.readInt();
+                ois.close();
+                bis.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
+        }
+        else
+        {
+            value = Bytes.toInt(bytes);
+        }
+        return value;
+    }
+
+    private long fetchLongInternal(AbstractMemberMetaData mmd, byte[] bytes)
+    {
+        long value;
+        if (bytes == null)
+        {
+            // Handle missing field
+            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
+            if (dflt != null)
+            {
+                return Long.valueOf(dflt).longValue();
+            }
+            return 0;
+        }
+
+        if (mmd.isSerialized())
+        {
+            try
+            {
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                value = ois.readLong();
+                ois.close();
+                bis.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
+        }
+        else
+        {
+            value = Bytes.toLong(bytes);
+        }
+        return value;
+    }
+
+    private short fetchShortInternal(AbstractMemberMetaData mmd, byte[] bytes)
+    {
+        short value;
+        if (bytes == null)
+        {
+            // Handle missing field
+            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
+            if (dflt != null)
+            {
+                return Short.valueOf(dflt).shortValue();
+            }
+            return 0;
+        }
+
+        if (mmd.isSerialized())
+        {
+            try
+            {
+                ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+                ObjectInputStream ois = new ObjectInputStream(bis);
+                value = ois.readShort();
+                ois.close();
+                bis.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
+        }
+        else
+        {
+            value = Bytes.toShort(bytes);
+        }
+        return value;
     }
 }

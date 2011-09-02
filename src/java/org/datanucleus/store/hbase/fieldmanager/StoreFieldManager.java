@@ -105,27 +105,7 @@ public class StoreFieldManager extends AbstractFieldManager
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        if (mmd.isSerialized())
-        {
-            try
-            {
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                ObjectOutputStream oos = new ObjectOutputStream(bos);
-                oos.writeBoolean(value);
-                oos.flush();
-                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                oos.close();
-                bos.close();
-            }
-            catch (IOException e)
-            {
-                throw new NucleusException(e.getMessage(), e);
-            }
-        }
-        else
-        {
-            put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
-        }
+        storeBooleanInternal(mmd, familyName, columnName, value);
     }
 
     public void storeByteField(int fieldNumber, byte value)
@@ -136,7 +116,8 @@ public class StoreFieldManager extends AbstractFieldManager
         }
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
-        put.add(familyName.getBytes(), columnName.getBytes(), new byte[]{value});
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        storeByteInternal(mmd, familyName, columnName, value);
     }
 
     public void storeCharField(int fieldNumber, char value)
@@ -148,27 +129,7 @@ public class StoreFieldManager extends AbstractFieldManager
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        if (mmd.isSerialized())
-        {
-            try
-            {
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                ObjectOutputStream oos = new ObjectOutputStream(bos);
-                oos.writeChar(value);
-                oos.flush();
-                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                oos.close();
-                bos.close();
-            }
-            catch (IOException e)
-            {
-                throw new NucleusException(e.getMessage(), e);
-            }
-        }
-        else
-        {
-            put.add(familyName.getBytes(), columnName.getBytes(), ("" + value).getBytes());
-        }
+        storeCharInternal(mmd, familyName, columnName, value);
     }
 
     public void storeDoubleField(int fieldNumber, double value)
@@ -180,27 +141,7 @@ public class StoreFieldManager extends AbstractFieldManager
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        if (mmd.isSerialized())
-        {
-            try
-            {
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                ObjectOutputStream oos = new ObjectOutputStream(bos);
-                oos.writeDouble(value);
-                oos.flush();
-                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                oos.close();
-                bos.close();
-            }
-            catch (IOException e)
-            {
-                throw new NucleusException(e.getMessage(), e);
-            }
-        }
-        else
-        {
-            put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
-        }
+        storeDoubleInternal(mmd, familyName, columnName, value);
     }
 
     public void storeFloatField(int fieldNumber, float value)
@@ -212,27 +153,7 @@ public class StoreFieldManager extends AbstractFieldManager
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        if (mmd.isSerialized())
-        {
-            try
-            {
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                ObjectOutputStream oos = new ObjectOutputStream(bos);
-                oos.writeFloat(value);
-                oos.flush();
-                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                oos.close();
-                bos.close();
-            }
-            catch (IOException e)
-            {
-                throw new NucleusException(e.getMessage(), e);
-            }
-        }
-        else
-        {
-            put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
-        }
+        storeFloatInternal(mmd, familyName, columnName, value);
     }
 
     public void storeIntField(int fieldNumber, int value)
@@ -244,27 +165,7 @@ public class StoreFieldManager extends AbstractFieldManager
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        if (mmd.isSerialized())
-        {
-            try
-            {
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                ObjectOutputStream oos = new ObjectOutputStream(bos);
-                oos.writeInt(value);
-                oos.flush();
-                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                oos.close();
-                bos.close();
-            }
-            catch (IOException e)
-            {
-                throw new NucleusException(e.getMessage(), e);
-            }
-        }
-        else
-        {
-            put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
-        }
+        storeIntInternal(mmd, familyName, columnName, value);
     }
 
     public void storeLongField(int fieldNumber, long value)
@@ -276,27 +177,7 @@ public class StoreFieldManager extends AbstractFieldManager
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        if (mmd.isSerialized())
-        {
-            try
-            {
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                ObjectOutputStream oos = new ObjectOutputStream(bos);
-                oos.writeLong(value);
-                oos.flush();
-                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                oos.close();
-                bos.close();
-            }
-            catch (IOException e)
-            {
-                throw new NucleusException(e.getMessage(), e);
-            }
-        }
-        else
-        {
-            put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
-        }
+        storeLongInternal(mmd, familyName, columnName, value);
     }
 
     public void storeShortField(int fieldNumber, short value)
@@ -308,27 +189,7 @@ public class StoreFieldManager extends AbstractFieldManager
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
-        if (mmd.isSerialized())
-        {
-            try
-            {
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                ObjectOutputStream oos = new ObjectOutputStream(bos);
-                oos.writeShort(value);
-                oos.flush();
-                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
-                oos.close();
-                bos.close();
-            }
-            catch (IOException e)
-            {
-                throw new NucleusException(e.getMessage(), e);
-            }
-        }
-        else
-        {
-            put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
-        }
+        storeShortInternal(mmd, familyName, columnName, value);
     }
 
     public void storeStringField(int fieldNumber, String value)
@@ -510,42 +371,42 @@ public class StoreFieldManager extends AbstractFieldManager
                 {
                     if (Boolean.class.isAssignableFrom(value.getClass()))
                     {
-                        storeBooleanField(fieldNumber, (Boolean)value);
+                        storeBooleanInternal(mmd, familyName, columnName, (Boolean)value);
                         return;
                     }
                     else if (Byte.class.isAssignableFrom(value.getClass()))
                     {
-                        storeByteField(fieldNumber, (Byte)value);
+                        storeByteInternal(mmd, familyName, columnName, (Byte)value);
                         return;
                     }
                     else if (Character.class.isAssignableFrom(value.getClass()))
                     {
-                        storeCharField(fieldNumber, (Character)value);
+                        storeCharInternal(mmd, familyName, columnName, (Character)value);
                         return;
                     }
                     else if (Double.class.isAssignableFrom(value.getClass()))
                     {
-                        storeDoubleField(fieldNumber, (Double)value);
+                        storeDoubleInternal(mmd, familyName, columnName, (Double)value);
                         return;
                     }
                     else if (Float.class.isAssignableFrom(value.getClass()))
                     {
-                        storeFloatField(fieldNumber, (Float)value);
+                        storeFloatInternal(mmd, familyName, columnName, (Float)value);
                         return;
                     }
                     else if (Integer.class.isAssignableFrom(value.getClass()))
                     {
-                        storeIntField(fieldNumber, (Integer)value);
+                        storeIntInternal(mmd, familyName, columnName, (Integer)value);
                         return;
                     }
                     else if (Long.class.isAssignableFrom(value.getClass()))
                     {
-                        storeLongField(fieldNumber, (Long)value);
+                        storeLongInternal(mmd, familyName, columnName, (Long)value);
                         return;
                     }
                     else if (Short.class.isAssignableFrom(value.getClass()))
                     {
-                        storeShortField(fieldNumber, (Short)value);
+                        storeShortInternal(mmd, familyName, columnName, (Short)value);
                         return;
                     }
                     else if (Enum.class.isAssignableFrom(value.getClass()))
@@ -619,4 +480,184 @@ public class StoreFieldManager extends AbstractFieldManager
             return;
         }
     }
+
+    private void storeBooleanInternal(AbstractMemberMetaData mmd, String familyName, String columnName, boolean value)
+    {
+        if (mmd.isSerialized())
+        {
+            try
+            {
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                ObjectOutputStream oos = new ObjectOutputStream(bos);
+                oos.writeBoolean(value);
+                oos.flush();
+                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                oos.close();
+                bos.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
+        }
+        else
+        {
+            put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
+        }
+    }
+
+    private void storeByteInternal(AbstractMemberMetaData mmd, String familyName, String columnName, byte value)
+    {
+        put.add(familyName.getBytes(), columnName.getBytes(), new byte[]{value});
+    }
+
+    private void storeCharInternal(AbstractMemberMetaData mmd, String familyName, String columnName, char value)
+    {
+        if (mmd.isSerialized())
+        {
+            try
+            {
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                ObjectOutputStream oos = new ObjectOutputStream(bos);
+                oos.writeChar(value);
+                oos.flush();
+                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                oos.close();
+                bos.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
+        }
+        else
+        {
+            put.add(familyName.getBytes(), columnName.getBytes(), ("" + value).getBytes());
+        }
+    }
+
+    private void storeDoubleInternal(AbstractMemberMetaData mmd, String familyName, String columnName, double value)
+    {
+        if (mmd.isSerialized())
+        {
+            try
+            {
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                ObjectOutputStream oos = new ObjectOutputStream(bos);
+                oos.writeDouble(value);
+                oos.flush();
+                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                oos.close();
+                bos.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
+        }
+        else
+        {
+            put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
+        }
+    }
+
+    private void storeFloatInternal(AbstractMemberMetaData mmd, String familyName, String columnName, float value)
+    {
+        if (mmd.isSerialized())
+        {
+            try
+            {
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                ObjectOutputStream oos = new ObjectOutputStream(bos);
+                oos.writeFloat(value);
+                oos.flush();
+                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                oos.close();
+                bos.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
+        }
+        else
+        {
+            put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
+        }
+    }
+
+    private void storeIntInternal(AbstractMemberMetaData mmd, String familyName, String columnName, int value)
+    {
+        if (mmd.isSerialized())
+        {
+            try
+            {
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                ObjectOutputStream oos = new ObjectOutputStream(bos);
+                oos.writeInt(value);
+                oos.flush();
+                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                oos.close();
+                bos.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
+        }
+        else
+        {
+            put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
+        }
+    }
+
+    private void storeLongInternal(AbstractMemberMetaData mmd, String familyName, String columnName, long value)
+    {
+        if (mmd.isSerialized())
+        {
+            try
+            {
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                ObjectOutputStream oos = new ObjectOutputStream(bos);
+                oos.writeLong(value);
+                oos.flush();
+                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                oos.close();
+                bos.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
+        }
+        else
+        {
+            put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
+        }
+    }
+
+    private void storeShortInternal(AbstractMemberMetaData mmd, String familyName, String columnName, short value)
+    {
+        if (mmd.isSerialized())
+        {
+            try
+            {
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                ObjectOutputStream oos = new ObjectOutputStream(bos);
+                oos.writeShort(value);
+                oos.flush();
+                put.add(familyName.getBytes(), columnName.getBytes(), bos.toByteArray());
+                oos.close();
+                bos.close();
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
+        }
+        else
+        {
+            put.add(familyName.getBytes(), columnName.getBytes(), Bytes.toBytes(value));
+        }
+   }
 }
