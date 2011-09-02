@@ -64,6 +64,22 @@ public class HBaseUtils
         "org.datanucleus.store.hbase.Localisation", HBaseStoreManager.class.getClassLoader());
 
     /**
+     * Accessor for the default value specified for the provided member.
+     * If no defaultValue is provided on the column then returns null.
+     * @param mmd Metadata for the member
+     * @return The default value
+     */
+    public static String getDefaultValueForMember(AbstractMemberMetaData mmd)
+    {
+        ColumnMetaData[] colmds = mmd.getColumnMetaData();
+        if (colmds == null || colmds.length < 1)
+        {
+            return null;
+        }
+        return colmds[0].getDefaultValue();
+    }
+
+    /**
      * Accessor for the HBase table name for this class.
      * @param acmd Metadata for the class
      * @return The table name

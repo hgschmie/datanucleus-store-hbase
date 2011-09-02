@@ -88,8 +88,18 @@ public class FetchFieldManager extends AbstractFieldManager
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        if (bytes == null)
+        {
+            // Handle missing field
+            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
+            if (dflt != null)
+            {
+                return Boolean.valueOf(dflt).booleanValue();
+            }
+            return false;
+        }
+
         if (mmd.isSerialized())
         {
             try
@@ -117,6 +127,18 @@ public class FetchFieldManager extends AbstractFieldManager
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        if (bytes == null)
+        {
+            // Handle missing field
+            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
+            if (dflt != null)
+            {
+                return dflt.getBytes()[0];
+            }
+            return 0;
+        }
+
         return bytes[0];
     }
 
@@ -126,8 +148,18 @@ public class FetchFieldManager extends AbstractFieldManager
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        if (bytes == null)
+        {
+            // Handle missing field
+            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
+            if (dflt != null && dflt.length() > 0)
+            {
+                return dflt.charAt(0);
+            }
+            return 0;
+        }
+
         if (mmd.isSerialized())
         {
             try
@@ -157,8 +189,18 @@ public class FetchFieldManager extends AbstractFieldManager
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        if (bytes == null)
+        {
+            // Handle missing field
+            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
+            if (dflt != null)
+            {
+                return Double.valueOf(dflt).doubleValue();
+            }
+            return 0;
+        }
+
         if (mmd.isSerialized())
         {
             try
@@ -187,8 +229,18 @@ public class FetchFieldManager extends AbstractFieldManager
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        if (bytes == null)
+        {
+            // Handle missing field
+            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
+            if (dflt != null)
+            {
+                return Float.valueOf(dflt).floatValue();
+            }
+            return 0;
+        }
+
         if (mmd.isSerialized())
         {
             try
@@ -217,8 +269,18 @@ public class FetchFieldManager extends AbstractFieldManager
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        if (bytes == null)
+        {
+            // Handle missing field
+            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
+            if (dflt != null)
+            {
+                return Integer.valueOf(dflt).intValue();
+            }
+            return 0;
+        }
+
         if (mmd.isSerialized())
         {
             try
@@ -247,8 +309,18 @@ public class FetchFieldManager extends AbstractFieldManager
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        if (bytes == null)
+        {
+            // Handle missing field
+            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
+            if (dflt != null)
+            {
+                return Long.valueOf(dflt).longValue();
+            }
+            return 0;
+        }
+
         if (mmd.isSerialized())
         {
             try
@@ -277,8 +349,18 @@ public class FetchFieldManager extends AbstractFieldManager
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-
         AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
+        if (bytes == null)
+        {
+            // Handle missing field
+            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
+            if (dflt != null)
+            {
+                return Short.valueOf(dflt).shortValue();
+            }
+            return 0;
+        }
+
         if (mmd.isSerialized())
         {
             try
@@ -307,12 +389,13 @@ public class FetchFieldManager extends AbstractFieldManager
         String familyName = getFamilyName(fieldNumber);
         String columnName = getQualifierName(fieldNumber);
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
         if (bytes == null)
         {
-            return null;
+            // Handle missing field
+            return HBaseUtils.getDefaultValueForMember(mmd);
         }
 
-        AbstractMemberMetaData mmd = getMemberMetaData(fieldNumber);
         if (mmd.isSerialized())
         {
             try
