@@ -682,12 +682,10 @@ public class HBaseUtils
                 Object version = null;
                 try
                 {
-                    NucleusLogger.GENERAL.info(">> getVersion family=" + familyName + " col=" + columnName + " field=" + verMmd.getFullFieldName());
                     byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
                     if (vermd.getVersionStrategy() == VersionStrategy.VERSION_NUMBER)
                     {
                         version = Bytes.toLong(bytes);
-                        NucleusLogger.GENERAL.info(">> Version from datastore(long)="+version);
                     }
                     else if (Date.class.isAssignableFrom(verMmd.getType()))
                     {
