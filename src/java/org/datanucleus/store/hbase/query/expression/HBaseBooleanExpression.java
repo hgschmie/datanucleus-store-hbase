@@ -44,12 +44,19 @@ public class HBaseBooleanExpression extends HBaseExpression
      */
     public HBaseBooleanExpression(String familyName, String columnName, Object value, Expression.Operator op)
     {
+        boolean filterIfMissing = true;
+        if (op == Expression.OP_NOTEQ)
+        {
+            // Allow rows if not set since they are "!="
+            filterIfMissing = false;
+        }
+
         CompareOp comp = getComparisonOperatorForExpressionOperator(op);
         if (value instanceof String)
         {
             filter = new SingleColumnValueFilter(Bytes.toBytes(familyName), Bytes.toBytes(columnName), 
                 comp, Bytes.toBytes((String)value));
-            ((SingleColumnValueFilter)filter).setFilterIfMissing(true);
+            ((SingleColumnValueFilter)filter).setFilterIfMissing(filterIfMissing);
         }
         else if (value instanceof Number)
         {
@@ -57,31 +64,31 @@ public class HBaseBooleanExpression extends HBaseExpression
             {
                 filter = new SingleColumnValueFilter(Bytes.toBytes(familyName), Bytes.toBytes(columnName), 
                     comp, Bytes.toBytes((Double)value));
-                ((SingleColumnValueFilter)filter).setFilterIfMissing(true);
+                ((SingleColumnValueFilter)filter).setFilterIfMissing(filterIfMissing);
             }
             else if (value instanceof Float)
             {
                 filter = new SingleColumnValueFilter(Bytes.toBytes(familyName), Bytes.toBytes(columnName), 
                     comp, Bytes.toBytes((Float)value));
-                ((SingleColumnValueFilter)filter).setFilterIfMissing(true);
+                ((SingleColumnValueFilter)filter).setFilterIfMissing(filterIfMissing);
             }
             else if (value instanceof Long)
             {
                 filter = new SingleColumnValueFilter(Bytes.toBytes(familyName), Bytes.toBytes(columnName), 
                     comp, Bytes.toBytes((Long)value));
-                ((SingleColumnValueFilter)filter).setFilterIfMissing(true);
+                ((SingleColumnValueFilter)filter).setFilterIfMissing(filterIfMissing);
             }
             else if (value instanceof Integer)
             {
                 filter = new SingleColumnValueFilter(Bytes.toBytes(familyName), Bytes.toBytes(columnName), 
                     comp, Bytes.toBytes((Integer)value));
-                ((SingleColumnValueFilter)filter).setFilterIfMissing(true);
+                ((SingleColumnValueFilter)filter).setFilterIfMissing(filterIfMissing);
             }
             else if (value instanceof Short)
             {
                 filter = new SingleColumnValueFilter(Bytes.toBytes(familyName), Bytes.toBytes(columnName), 
                     comp, Bytes.toBytes((Short)value));
-                ((SingleColumnValueFilter)filter).setFilterIfMissing(true);
+                ((SingleColumnValueFilter)filter).setFilterIfMissing(filterIfMissing);
             }
         }
         else
