@@ -83,7 +83,7 @@ public class HBaseManagedConnection extends AbstractManagedConnection
     {
         return null;
     }
-    
+
     public void close()
     {
         if (tables.size() == 0)
@@ -96,7 +96,9 @@ public class HBaseManagedConnection extends AbstractManagedConnection
         }
         try
         {
-            //close something?
+            Map<String, HTable> oldtables = tables;
+            tables = new HashMap<String, HTable>();
+            closeTables(oldtables);
         }
         finally
         {
@@ -151,7 +153,6 @@ public class HBaseManagedConnection extends AbstractManagedConnection
     public void dispose() 
     {
     	isDisposed = true;
-    	closeTables(tables);
     }
 
     public boolean isDisposed() 
