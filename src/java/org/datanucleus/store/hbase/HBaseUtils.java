@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
+import org.datanucleus.exceptions.NucleusUnsupportedOptionException;
 import org.datanucleus.identity.OID;
 import org.datanucleus.metadata.AbstractClassMetaData;
 import org.datanucleus.metadata.AbstractMemberMetaData;
@@ -98,7 +99,7 @@ public class HBaseUtils
     }
 
     /**
-     * Accessor for the HBase family name for the field of the embedded field. 
+     * Accessor for the HBase family name for the field of the embedded field.
      * Extracts the family name using the following priorities
      * <ul>
      * <li>If column is specified as "a:b" then takes "a" as the family name.</li>
@@ -135,7 +136,7 @@ public class HBaseUtils
     }
 
     /**
-     * Accessor for the HBase qualifier name for the field of this embedded field. 
+     * Accessor for the HBase qualifier name for the field of this embedded field.
      * Extracts the qualifier name using the following priorities
      * <ul>
      * <li>If column is specified as "a:b" then takes "b" as the qualifier name.</li>
@@ -177,7 +178,7 @@ public class HBaseUtils
     }
 
     /**
-     * Accessor for the HBase family name for the identity of this class. 
+     * Accessor for the HBase family name for the identity of this class.
      * Extracts the family name using the following priorities
      * <ul>
      * <li>If column is specified as "a:b" then takes "a" as the family name.</li>
@@ -206,7 +207,7 @@ public class HBaseUtils
     }
 
     /**
-     * Accessor for the HBase qualifier name for this identity. 
+     * Accessor for the HBase qualifier name for this identity.
      * Extracts the qualifier name using the following priorities
      * <ul>
      * <li>If column is specified as "a:b" then takes "b" as the qualifier name.</li>
@@ -239,7 +240,7 @@ public class HBaseUtils
     }
 
     /**
-     * Accessor for the HBase family name for the discriminator of this class. 
+     * Accessor for the HBase family name for the discriminator of this class.
      * Extracts the family name using the following priorities
      * <ul>
      * <li>If column is specified as "a:b" then takes "a" as the family name.</li>
@@ -268,7 +269,7 @@ public class HBaseUtils
     }
 
     /**
-     * Accessor for the HBase qualifier name for this discriminator. 
+     * Accessor for the HBase qualifier name for this discriminator.
      * Extracts the qualifier name using the following priorities
      * <ul>
      * <li>If column is specified as "a:b" then takes "b" as the qualifier name.</li>
@@ -301,7 +302,7 @@ public class HBaseUtils
     }
 
     /**
-     * Accessor for the HBase family name for the version of this class. 
+     * Accessor for the HBase family name for the version of this class.
      * Extracts the family name using the following priorities
      * <ul>
      * <li>If column is specified as "a:b" then takes "a" as the family name.</li>
@@ -330,7 +331,7 @@ public class HBaseUtils
     }
 
     /**
-     * Accessor for the HBase qualifier name for this version. 
+     * Accessor for the HBase qualifier name for this version.
      * Extracts the qualifier name using the following priorities
      * <ul>
      * <li>If column is specified as "a:b" then takes "b" as the qualifier name.</li>
@@ -361,7 +362,7 @@ public class HBaseUtils
         }
         return columnName;
     }
-    
+
     /**
      * Accessor for the HBase family name for this field. Extracts the family name using the following priorities
      * <ul>
@@ -425,7 +426,7 @@ public class HBaseUtils
         }
         return columnName;
     }
-    
+
     /**
      * Create a schema in HBase. Do not make this method public, since it uses privileged actions.
      * @param storeMgr HBase StoreManager
@@ -433,7 +434,7 @@ public class HBaseUtils
      * @param autoCreateColumns Whether auto-create of columns is set
      * @param validateOnly Whether to only validate for existence and flag missing schema in the log
      */
-    static void createSchemaForClass(final HBaseStoreManager storeMgr, final AbstractClassMetaData acmd, 
+    static void createSchemaForClass(final HBaseStoreManager storeMgr, final AbstractClassMetaData acmd,
             final boolean validateOnly)
     {
         if (acmd.isEmbeddedOnly())
@@ -452,7 +453,7 @@ public class HBaseUtils
                     return new HBaseAdmin(config);
                 }
             });
-            
+
             final HTableDescriptor hTable = (HTableDescriptor) AccessController.doPrivileged(new PrivilegedExceptionAction()
             {
                 public Object run() throws Exception
@@ -557,7 +558,7 @@ public class HBaseUtils
         }
     }
 
-    static boolean createSchemaForEmbeddedMember(HBaseStoreManager storeMgr, HTableDescriptor hTable, 
+    static boolean createSchemaForEmbeddedMember(HBaseStoreManager storeMgr, HTableDescriptor hTable,
             AbstractMemberMetaData mmd, ClassLoaderResolver clr, boolean validateOnly)
     {
         boolean modified = false;
@@ -624,7 +625,7 @@ public class HBaseUtils
                     return new HBaseAdmin(config);
                 }
             });
-            
+
             final HTableDescriptor hTable = (HTableDescriptor) AccessController.doPrivileged(new PrivilegedExceptionAction()
             {
                 public Object run() throws Exception
@@ -774,18 +775,8 @@ public class HBaseUtils
         AbstractClassMetaData cmd = sm.getClassMetaData();
         boolean serialisedPk = sm.getExecutionContext().getNucleusContext().getPersistenceConfiguration().getBooleanProperty("datanucleus.hbase.serialisedPK");
 
-        Object pkValue = null;
-        if (cmd.getIdentityType() == IdentityType.DATASTORE)
-        {
-            pkValue = ((OID)sm.getInternalObjectId()).getKeyValue();
-        }
-        else if (cmd.getIdentityType() == IdentityType.APPLICATION)
-        {
-            // TODO Support composite PKs
-            pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
-        }
-
-        byte[] pkBytes = getBytesForPkValue(pkValue, serialisedPk);
+        final Object [] pkValues = findKeyObjects(sm, cmd);
+        byte[] pkBytes = getBytesForPkValue(pkValues, serialisedPk);
         return new Put(pkBytes);
     }
 
@@ -794,18 +785,8 @@ public class HBaseUtils
         AbstractClassMetaData cmd = sm.getClassMetaData();
         boolean serialisedPk = sm.getExecutionContext().getNucleusContext().getPersistenceConfiguration().getBooleanProperty("datanucleus.hbase.serialisedPK");
 
-        Object pkValue = null;
-        if (cmd.getIdentityType() == IdentityType.DATASTORE)
-        {
-            pkValue = ((OID)sm.getInternalObjectId()).getKeyValue();
-        }
-        else if (cmd.getIdentityType() == IdentityType.APPLICATION)
-        {
-            // TODO Support composite PKs
-            pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
-        }
-
-        byte[] pkBytes = getBytesForPkValue(pkValue, serialisedPk);
+        final Object [] pkValues = findKeyObjects(sm, cmd);
+        byte[] pkBytes = getBytesForPkValue(pkValues, serialisedPk);
         return new Delete(pkBytes);
     }
 
@@ -814,18 +795,8 @@ public class HBaseUtils
         AbstractClassMetaData cmd = sm.getClassMetaData();
         boolean serialisedPk = sm.getExecutionContext().getNucleusContext().getPersistenceConfiguration().getBooleanProperty("datanucleus.hbase.serialisedPK");
 
-        Object pkValue = null;
-        if (cmd.getIdentityType() == IdentityType.DATASTORE)
-        {
-            pkValue = ((OID)sm.getInternalObjectId()).getKeyValue();
-        }
-        else if (cmd.getIdentityType() == IdentityType.APPLICATION)
-        {
-            // TODO Support composite PKs
-            pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
-        }
-
-        byte[] pkBytes = getBytesForPkValue(pkValue, serialisedPk);
+        final Object [] pkValues = findKeyObjects(sm, cmd);
+        byte[] pkBytes = getBytesForPkValue(pkValues, serialisedPk);
         Get get = new Get(pkBytes);
         return table.get(get);
     }
@@ -835,72 +806,91 @@ public class HBaseUtils
         AbstractClassMetaData cmd = sm.getClassMetaData();
         boolean serialisedPk = sm.getExecutionContext().getNucleusContext().getPersistenceConfiguration().getBooleanProperty("datanucleus.hbase.serialisedPK");
 
-        Object pkValue = null;
-        if (cmd.getIdentityType() == IdentityType.DATASTORE)
-        {
-            pkValue = ((OID)sm.getInternalObjectId()).getKeyValue();
-        }
-        else if (cmd.getIdentityType() == IdentityType.APPLICATION)
-        {
-            // TODO Support composite PKs
-            pkValue = sm.provideField(sm.getClassMetaData().getPKMemberPositions()[0]);
-        }
-
-        byte[] pkBytes = getBytesForPkValue(pkValue, serialisedPk);
+        final Object [] pkValues = findKeyObjects(sm, cmd);
+        byte[] pkBytes = getBytesForPkValue(pkValues, serialisedPk);
         Get get = new Get(pkBytes);
         return table.exists(get);
     }
 
-    static byte[] getBytesForPkValue(Object pkValue, boolean useSerialisation) throws IOException
+    private static Object [] findKeyObjects(final ObjectProvider sm, final AbstractClassMetaData cmd)
     {
-        if (useSerialisation)
+        if (cmd.getIdentityType() == IdentityType.DATASTORE)
         {
-            // Legacy data, up to and including DN 3.0.1
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(bos);
-            try
+            return new Object [] { ((OID)sm.getInternalObjectId()).getKeyValue() };
+        }
+        else if (cmd.getIdentityType() == IdentityType.APPLICATION)
+        {
+            final int [] pos = sm.getClassMetaData().getPKMemberPositions();
+            final Object [] keyObjects = new Object[pos.length];
+            for (int i = 0; i < pos.length; i++)
             {
-                oos.writeObject(pkValue);
-                return bos.toByteArray();
+                keyObjects[i] = sm.provideField(pos[i]);
             }
-            finally
-            {
-                oos.close();
-                bos.close();
-            }
+            return keyObjects;
         }
 
-        if (pkValue instanceof String)
+        throw new NucleusUnsupportedOptionException("unsupported identity type: " + cmd.getIdentityType());
+    }
+
+    static byte[] getBytesForPkValue(Object [] pkValues, boolean useSerialisation) throws IOException
+    {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+
+        try
         {
-            return Bytes.toBytes((String)pkValue);
-        }
-        else if (pkValue instanceof Long)
-        {
-            return Bytes.toBytes(((Long)pkValue).longValue());
-        }
-        else if (pkValue instanceof Integer)
-        {
-            return Bytes.toBytes(((Integer)pkValue).intValue());
-        }
-        else if (pkValue instanceof Short)
-        {
-            return Bytes.toBytes(((Short)pkValue).shortValue());
-        }
-        else
-        {
-            // Object serialisation approach
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(bos);
-            try
+            if (useSerialisation)
             {
-                oos.writeObject(pkValue);
-                return bos.toByteArray();
+                ObjectOutputStream oos = new ObjectOutputStream(bos);
+                try {
+                    // Legacy data, up to and including DN 3.0.1
+                    for (Object pkValue : pkValues)
+                    {
+                        oos.writeObject(pkValue);
+                    }
+                }
+                finally {
+                    oos.close();
+                }
             }
-            finally
+            else
             {
-                oos.close();
-                bos.close();
+                for (Object pkValue : pkValues)
+                {
+                    if (pkValue instanceof String)
+                    {
+                        bos.write(Bytes.toBytes((String)pkValue));
+                    }
+                    else if (pkValue instanceof Long)
+                    {
+                        bos.write(Bytes.toBytes(((Long)pkValue).longValue()));
+                    }
+                    else if (pkValue instanceof Integer)
+                    {
+                        bos.write(Bytes.toBytes(((Integer)pkValue).intValue()));
+                    }
+                    else if (pkValue instanceof Short)
+                    {
+                        bos.write(Bytes.toBytes(((Short)pkValue).shortValue()));
+                    }
+                    else
+                    {
+                        // Object serialisation approach. Can't keep that open from the very
+                        // beginning, it messes up the byte stream.
+                        ObjectOutputStream oos = new ObjectOutputStream(bos);
+                        try {
+                            oos.writeObject(pkValue);
+                        }
+                        finally {
+                            oos.close();
+                        }
+                    }
+                }
             }
+            return bos.toByteArray();
+        }
+        finally
+        {
+            bos.close();
         }
     }
 }
