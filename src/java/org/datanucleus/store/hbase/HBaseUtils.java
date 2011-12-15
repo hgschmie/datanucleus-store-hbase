@@ -29,6 +29,7 @@ import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.sql.Timestamp;
 import java.util.Date;
+import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -61,6 +62,8 @@ import org.datanucleus.store.ObjectProvider;
 import org.datanucleus.store.types.ObjectStringConverter;
 import org.datanucleus.util.Localiser;
 import org.datanucleus.util.NucleusLogger;
+
+import com.google.common.base.Charsets;
 
 public class HBaseUtils
 {
@@ -691,7 +694,7 @@ public class HBaseUtils
                     else if (Date.class.isAssignableFrom(verMmd.getType()))
                     {
                         // Field is of type Date (hence persisted as String), but version needs to be Timestamp
-                        String strValue = new String(bytes);
+                        String strValue = new String(bytes, Charsets.UTF_8);
                         ObjectStringConverter strConv = ec.getNucleusContext().getTypeManager().getStringConverter(verMmd.getType());
                         version = strConv.toObject(strValue);
                         version = new Timestamp(((Date)version).getTime());
@@ -767,7 +770,7 @@ public class HBaseUtils
         String familyName = HBaseUtils.getFamilyName(cmd.getDiscriminatorMetaData());
         String columnName = HBaseUtils.getQualifierName(cmd.getDiscriminatorMetaData());
         byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
-        return new String(bytes);
+        return new String(bytes, Charsets.UTF_8);
     }
 
     public static Put getPutForObject(ObjectProvider sm) throws IOException
@@ -871,6 +874,11 @@ public class HBaseUtils
                     else if (pkValue instanceof Short)
                     {
                         bos.write(Bytes.toBytes(((Short)pkValue).shortValue()));
+                    }
+                    else if (pkValue instanceof UUID)
+                    {
+                        bos.write(Bytes.toBytes(((UUID)pkValue).getMostSignificantBits()));
+                        bos.write(Bytes.toBytes(((UUID)pkValue).getLeastSignificantBits()));
                     }
                     else
                     {

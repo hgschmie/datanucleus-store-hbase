@@ -26,9 +26,12 @@ import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.UUID;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.IOUtils;
 import org.datanucleus.ClassLoaderResolver;
 import org.datanucleus.exceptions.NucleusDataStoreException;
 import org.datanucleus.exceptions.NucleusException;
@@ -44,6 +47,8 @@ import org.datanucleus.store.fieldmanager.FieldManager;
 import org.datanucleus.store.hbase.HBaseUtils;
 import org.datanucleus.store.types.ObjectStringConverter;
 import org.datanucleus.store.types.sco.SCOUtils;
+
+import com.google.common.base.Charsets;
 
 public class FetchFieldManager extends AbstractFieldManager
 {
@@ -188,7 +193,7 @@ public class FetchFieldManager extends AbstractFieldManager
         }
         else
         {
-            value = new String(bytes);
+            value = new String(bytes, Charsets.UTF_8);
         }
         return value;
     }
@@ -197,6 +202,14 @@ public class FetchFieldManager extends AbstractFieldManager
     {
         ClassLoaderResolver clr = ec.getClassLoaderResolver();
         AbstractMemberMetaData mmd = cmd.getMetaDataForManagedMemberAtAbsolutePosition(fieldNumber);
+
+        if (mmd.getType() == UUID.class) {
+            String familyName = HBaseUtils.getFamilyName(cmd, fieldNumber);
+            String columnName = HBaseUtils.getQualifierName(cmd, fieldNumber);
+            byte[] bytes = result.getValue(familyName.getBytes(), columnName.getBytes());
+            return fetchUUIDInternal(mmd, bytes);
+        }
+
         int relationType = mmd.getRelationType(clr);
         if (mmd.isEmbedded() && Relation.isRelationSingleValued(relationType))
         {
@@ -363,7 +376,7 @@ public class FetchFieldManager extends AbstractFieldManager
                     return Enum.valueOf(mmd.getType(), (String)value);
                 }
 
-                ObjectStringConverter strConv = 
+                ObjectStringConverter strConv =
                     ec.getNucleusContext().getTypeManager().getStringConverter(mmd.getType());
                 if (strConv != null)
                 {
@@ -421,6 +434,10 @@ public class FetchFieldManager extends AbstractFieldManager
         {
             return fetchShortInternal(mmd, bytes);
         }
+        else if (mmd.getType() == UUID.class)
+        {
+            return fetchUUIDInternal(mmd, bytes);
+        }
 
         ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
         ObjectInputStream ois = null;
@@ -433,7 +450,7 @@ public class FetchFieldManager extends AbstractFieldManager
         {
             // Failure in deserialisation, so must be persisted as String
             // Return as a String TODO Allow persist using ObjectLongConverter as non-serialised
-            return new String(bytes);
+            return new String(bytes, Charsets.UTF_8);
         }
         catch (ClassNotFoundException e)
         {
@@ -441,21 +458,8 @@ public class FetchFieldManager extends AbstractFieldManager
         }
         finally
         {
-            try
-            {
-                if (ois != null)
-                {
-                    ois.close();
-                }
-                if (bis != null)
-                {
-                    bis.close();
-                }
-            }
-            catch (IOException ioe)
-            {
-                throw new NucleusException(ioe.getMessage(), ioe);
-            }
+            IOUtils.closeStream(ois);
+            IOUtils.closeStream(bis);
         }
     }
 
@@ -542,7 +546,7 @@ public class FetchFieldManager extends AbstractFieldManager
         }
         else
         {
-            String strValue = new String(bytes);
+            String strValue = new String(bytes, Charsets.UTF_8);
             value = strValue.charAt(0);
         }
         return value;
@@ -726,5 +730,53 @@ public class FetchFieldManager extends AbstractFieldManager
             value = Bytes.toShort(bytes);
         }
         return value;
+    }
+
+    private UUID fetchUUIDInternal(AbstractMemberMetaData mmd, byte[] bytes)
+    {
+        if (bytes == null)
+        {
+            // Handle missing field
+            String dflt = HBaseUtils.getDefaultValueForMember(mmd);
+            return dflt != null ? UUID.fromString(dflt) : null;
+        }
+
+        if (mmd.isSerialized())
+        {
+            ByteArrayInputStream bis = null;
+            ObjectInputStream ois = null;
+            try
+            {
+                bis = new ByteArrayInputStream(bytes);
+                ois = new ObjectInputStream(bis);
+                return UUID.class.cast(ois.readObject());
+            }
+            catch (ClassNotFoundException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
+            catch (IOException e)
+            {
+                throw new NucleusException(e.getMessage(), e);
+            }
+            finally
+            {
+                IOUtils.closeStream(ois);
+                IOUtils.closeStream(bis);
+            }
+        }
+        else
+        {
+            if (bytes.length ==16) {
+                // serialized as bytes
+                long upper = Bytes.toLong(bytes);
+                long lower = Bytes.toLong(ArrayUtils.subarray(bytes, 8, 16));
+                return new UUID(upper, lower);
+            }
+            else {
+                final String value = new String(bytes, Charsets.UTF_8);
+                return UUID.fromString(value);
+            }
+        }
     }
 }
